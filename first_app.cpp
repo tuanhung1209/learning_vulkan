@@ -79,7 +79,7 @@ void FirstApp::run() {
 
         if (auto commandBuffer = myRenderer.beginFrame()){
             int frameIndex = myRenderer.getFrameIndex();
-            FrameInfo frameInfo{frameIndex, frameTime, commandBuffer, camera, globalDescriptorSet};
+            FrameInfo frameInfo{frameIndex, frameTime, commandBuffer, camera, globalDescriptorSet[frameIndex]};
 
             // line below to update 
             GlobalUbo ubo{};
