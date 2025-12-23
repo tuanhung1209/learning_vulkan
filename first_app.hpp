@@ -34,7 +34,7 @@ class FirstApp{
         // currently using mailbox not vsync(fifo) will change if run into error
 
         std::unique_ptr<MyDescriptorPool>globalPool;
-        std::vector<MyGameObject> gameObjects;
+        MyGameObject::Map gameObjects;
 };
 
 }

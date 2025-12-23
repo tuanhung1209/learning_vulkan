@@ -19,7 +19,7 @@ public:
         SimpleRenderSystem(const SimpleRenderSystem &) = delete;
         SimpleRenderSystem& operator=(const SimpleRenderSystem &) = delete;
 
-        void renderGameObjects(FrameInfo &frameInfo, std::vector<MyGameObject> &gameObjects);
+        void renderGameObjects(FrameInfo &frameInfo);
     private:
         void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
         void createPipeline(VkRenderPass renderPass);

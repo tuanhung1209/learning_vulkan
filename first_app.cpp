@@ -82,7 +82,7 @@ void FirstApp::run() {
 
         if (auto commandBuffer = myRenderer.beginFrame()){
             int frameIndex = myRenderer.getFrameIndex();
-            FrameInfo frameInfo{frameIndex, frameTime, commandBuffer, camera, globalDescriptorSet[frameIndex]};
+            FrameInfo frameInfo{frameIndex, frameTime, commandBuffer, camera, globalDescriptorSet[frameIndex], gameObjects};
 
             // line below to update 
             GlobalUbo ubo{};
@@ -92,7 +92,7 @@ void FirstApp::run() {
 
             // line below to render 
             myRenderer.beginSwapChainRenderPass(commandBuffer);
-            simpleRenderSystem.renderGameObjects(frameInfo, gameObjects);
+            simpleRenderSystem.renderGameObjects(frameInfo);
 
             myRenderer.endSwapChainRenderPass(commandBuffer);
             myRenderer.endFrame();
@@ -108,21 +108,21 @@ void FirstApp::loadGameObjects(){
     smoothVase.model = gameModel;
     smoothVase.transform.translation = {-.5f, .5f, .0f};
     smoothVase.transform.scale = glm::vec3(3.f);
-    gameObjects.push_back(std::move(smoothVase));
+    gameObjects.emplace(smoothVase.getId(),std::move(smoothVase));
 
     std::shared_ptr<MyModel> gameModel1 = MyModel::createModelFromFile(device, "models/flat_vase.obj");
     auto flatVase = MyGameObject::createGameObject();
     flatVase.model = gameModel1;
     flatVase.transform.translation = {.5f, .5f, .0f};
     flatVase.transform.scale = glm::vec3(3.f);
-    gameObjects.push_back(std::move(flatVase));
+    gameObjects.emplace(flatVase.getId(),std::move(flatVase));
 
     std::shared_ptr<MyModel> gameModel2 = MyModel::createModelFromFile(device, "models/quad.obj");
     auto quad = MyGameObject::createGameObject();
     quad.model = gameModel2;
     quad.transform.translation = {.0f, .5f, .0f};
     quad.transform.scale = glm::vec3(3.f);
-    gameObjects.push_back(std::move(quad));
+    gameObjects.emplace(quad.getId(),std::move(quad));
 }
 
 }
