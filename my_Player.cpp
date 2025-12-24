@@ -15,7 +15,7 @@ namespace my{
         }
 
         for (auto it = bulletsInfo.begin(); it != bulletsInfo.end();){
-            auto bulletInfo = *it;
+            auto &bulletInfo = *it;
 
             if (gameObjects.find(bulletInfo.gameObjectId) != gameObjects.end()){
                 auto &mapBullet = gameObjects.at(bulletInfo.gameObjectId); 
@@ -51,8 +51,8 @@ namespace my{
 
         gameObjectBulletInfo bulletInfo{};
         bulletInfo.gameObjectId = bullet.getId();
-        bulletInfo.lifeTime = 2.0f;
-        bulletInfo.velocity = glm::vec3{2.f};
+        bulletInfo.lifeTime = 20.0f;
+        bulletInfo.velocity = forwardDir * glm::vec3{2.f};
 
         bulletsInfo.push_back(bulletInfo); 
 
