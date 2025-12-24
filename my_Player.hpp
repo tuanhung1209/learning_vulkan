@@ -6,16 +6,15 @@
 
 #include <vector>
 
-
 namespace my{
 class MyPlayer{
 public:
 
-    MyPlayer(MyCamera &camera, MyGameObject::id_t playerId);
+    MyPlayer(std::shared_ptr<MyModel> bulletModel ,MyCamera &camera, MyGameObject::id_t playerId);
 
     ~MyPlayer();
 
-    void shoot();
+    void shoot(float dt, MyGameObject::Map &gameObjects);
 
     void update(GLFWwindow *window, float dt, MyGameObject::Map &gameObjects);
 
@@ -24,7 +23,8 @@ private:
     MyGameObject::id_t playerId;
     KeyboardMovementController playerController{};
 
-    std::vector<MyGameObject> bullets;
+    std::shared_ptr<MyModel> bulletModel;
+    std::vector<gameObjectBulletInfo> bulletsInfo;
 };
 
 }

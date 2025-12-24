@@ -44,9 +44,10 @@ class MyGameObject{
     id_t id;
 };
 
-struct Bullet{
+struct gameObjectBulletInfo{
     MyGameObject::id_t gameObjectId;
     glm::vec3 velocity;
     float lifeTime;
 };
+
 }

@@ -60,16 +60,14 @@ void FirstApp::run() {
     // camera.setViewDirection(glm::vec3(0.f), glm::vec3(0.7f, 0.f, 1.f));
     camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
 
-    //auto viewerObject = MyGameObject::createGameObject();
+    //std::shared_ptr<MyModel> cubeModel = MyModel::createModelFromFile(device, "models/cube.obj");
 
     auto playerObject = MyGameObject::createGameObject();
     gameObjects.emplace(playerObject.getId(), std::move(playerObject));
-    MyPlayer mainPlayer{camera, playerObject.getId()};
+    MyPlayer mainPlayer{MyModel::createModelFromFile(device, "models/cube.obj"), camera, playerObject.getId()};
     
     // TODO : test this later for camera position
     playerObject.transform.translation.z = -2.5f;
-
-    //KeyboardMovementController cameraController{};
 
     auto currentTime = std::chrono::high_resolution_clock::now();
            
@@ -82,9 +80,6 @@ void FirstApp::run() {
 
         // may add smallest time frame to prevent frame skipping
         mainPlayer.update(window.getWindow(), frameTime, gameObjects);
-
-        //cameraController.moveInPlaneXZ(window.getWindow(), frameTime, viewerObject);
-        //camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
 
         float aspect = myRenderer.getAspectRatio();
         //camera.setOrthographicProjection(-aspect, aspect, -1, 1, -1, 1);
@@ -133,8 +128,6 @@ void FirstApp::loadGameObjects(){
     quad.transform.translation = {.0f, .5f, .0f};
     quad.transform.scale = glm::vec3(3.f);
     gameObjects.emplace(quad.getId(),std::move(quad));
-
-    std::shared_ptr<MyModel> cube = MyModel::createModelFromFile(device, "models/cube.obj");
 }
 
 }
