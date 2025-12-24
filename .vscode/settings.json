@@ -3,5 +3,9 @@
         "iostream": "cpp",
         "chrono": "cpp",
         "functional": "cpp"
+    },
+
+    "vim.handleKeys": {
+        "<C-p>": false,
     }
 }

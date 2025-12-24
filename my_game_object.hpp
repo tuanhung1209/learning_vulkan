@@ -35,6 +35,7 @@ class MyGameObject{
 
     std::shared_ptr<MyModel> model{}; 
     glm::vec3 color{};   
+
     TransformComponent transform{};
 
     private:
@@ -43,4 +44,9 @@ class MyGameObject{
     id_t id;
 };
 
+struct Bullet{
+    MyGameObject::id_t gameObjectId;
+    glm::vec3 velocity;
+    float lifeTime;
+};
 }
