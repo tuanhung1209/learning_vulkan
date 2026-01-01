@@ -1,6 +1,7 @@
 #include <GLFW/glfw3.h>
 #include "first_app.hpp"
-#include "simple_render_system.hpp"
+#include "systems/simple_render_system.hpp"
+#include "systems/point_light_system.hpp"
 #include "keyboard_movement_controller.hpp"
 #include "my_buffer.hpp"
 
@@ -16,7 +17,8 @@
 namespace my{
 
 struct GlobalUbo{
-    glm::mat4 projectionView{1.f};
+    glm::mat4 projection{1.f};
+    glm::mat4 view{1.f};
     glm::vec4 ambientLightColor{1.f, 1.f, 1.f, .02f};
     glm::vec3 lightPosition{-1.f};
     alignas(16) glm::vec4 lightColor{1.f};
@@ -53,6 +55,7 @@ void FirstApp::run() {
     }
 
     SimpleRenderSystem simpleRenderSystem{device, myRenderer.getSwapChainRenderPass(), globalSetLayout->getDescriptorSetLayout()};
+    PointLightSystem PointLightSystem{device, myRenderer.getSwapChainRenderPass(), globalSetLayout->getDescriptorSetLayout()};
     MyCamera camera{};
 
     // camera.setViewDirection(glm::vec3(0.f), glm::vec3(0.7f, 0.f, 1.f));
@@ -86,13 +89,15 @@ void FirstApp::run() {
 
             // line below to update 
             GlobalUbo ubo{};
-            ubo.projectionView = camera.getProjectionMatrix() * camera.getView();
+            ubo.projection = camera.getProjectionMatrix();
+            ubo.view = camera.getView();
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
             uboBuffers[frameIndex]->flush();
 
             // line below to render 
             myRenderer.beginSwapChainRenderPass(commandBuffer);
             simpleRenderSystem.renderGameObjects(frameInfo);
+            PointLightSystem.renderLight(frameInfo);
 
             myRenderer.endSwapChainRenderPass(commandBuffer);
             myRenderer.endFrame();
