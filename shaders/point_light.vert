@@ -27,7 +27,7 @@ void main() {
     vec3 cameraUpWorld = {ubo.view[0][1], ubo.view[1][1] ,ubo.view[2][1]};
 
     vec3 positionWorld = ubo.lightPosition.xyz + LIGHT_RADIOUS * fragOffset.x * cameraRightWorld 
-                                               + LIGHT_RADIOUS * fragOffset.x * cameraUpWorld; 
+                                               + LIGHT_RADIOUS * fragOffset.y * cameraUpWorld; 
 
     gl_Position = ubo.projection * ubo.view * vec4(positionWorld, 1.0);
 }
