@@ -58,8 +58,6 @@ void SimpleRenderSystem::createPipeline(VkRenderPass renderPass){
 void SimpleRenderSystem::renderGameObjects(FrameInfo &frameInfo){
     myPipeLine->bind(frameInfo.commandBuffer);
 
-    auto projectionView = frameInfo.camera.getProjectionMatrix() * frameInfo.camera.getView();
-
     vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &frameInfo.globalDescriptorSet, 0, nullptr);
 
     // can split into multiple vector to have object with different component/attribute 
