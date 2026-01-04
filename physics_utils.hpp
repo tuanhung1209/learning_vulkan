@@ -21,6 +21,10 @@ public:
 
 private:
     static OBB getOBB(MyGameObject &obj);
+
+    static bool testAxis(const glm::vec3& axis, const OBB& obbA, const OBB& obbB,
+                         float& minOverlap, glm::vec3& smallestAxis);
+
 };
 
 };
