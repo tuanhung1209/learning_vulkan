@@ -18,7 +18,7 @@ struct collisionManifold{
 
 class CollisionSystem{
 public:
-
+    collisionManifold checkCollisionOBB(MyGameObject& objA, MyGameObject& objB);
 private:
     static OBB getOBB(MyGameObject &obj);
 
