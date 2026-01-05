@@ -18,6 +18,8 @@ public:
 
     void update(GLFWwindow *window, float dt, MyGameObject::Map &gameObjects);
 
+    std::vector<gameObjectBulletInfo> getBulletInfo() {return bulletsInfo;}
+
 private:
     MyCamera &camera;
     MyGameObject::id_t playerId;

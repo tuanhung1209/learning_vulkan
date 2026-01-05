@@ -45,9 +45,9 @@ namespace my{
 
         float yaw = playerTransform.rotation.y;
         float pitch = playerTransform.rotation.x;
-        glm::vec3 forwardDir{sin(yaw), 0.f, cos(yaw)};
-        // TODO : test the 0.5f
-        bullet.transform.translation += forwardDir * 0.5f;
+        glm::vec3 forwardDir{sin(yaw) * cos(pitch), -sin(pitch), cos(yaw) * cos(pitch)};
+
+        bullet.transform.translation += forwardDir * 2.5f;
 
         gameObjectBulletInfo bulletInfo{};
         bulletInfo.gameObjectId = bullet.getId();
