@@ -63,7 +63,7 @@ void FirstApp::run() {
 
     // camera.setViewDirection(glm::vec3(0.f), glm::vec3(0.7f, 0.f, 1.f));
     camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
-
+    
 	//TODO : init an id in the main player file
     auto playerObject = MyGameObject::createGameObject();
     gameObjects.emplace(playerObject.getId(), std::move(playerObject));
@@ -84,6 +84,7 @@ void FirstApp::run() {
         // may add smallest time frame to prevent frame skipping
 
         mainPlayer.update(window.getWindow(), frameTime, gameObjects);
+        //TODO : create a abtract file for bullets/abundunceStuff handling
 		std::vector<gameObjectBulletInfo> bulletsInfo = mainPlayer.getBulletInfo();
 
         for (auto it = bulletsInfo.begin(); it != bulletsInfo.end();){
@@ -97,10 +98,6 @@ void FirstApp::run() {
             }
             it++;
         }
-		for (auto bullet : mainPlayer.getBulletInfo()){
-
-		//if(CollisionSystem::checkCollisionOBB())
-		}
 
         float aspect = myRenderer.getAspectRatio();
         camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 100.f);

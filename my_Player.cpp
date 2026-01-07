@@ -10,8 +10,13 @@ namespace my{
         playerController.moveInPlaneXZ(window, dt, body); 
         camera.setViewYXZ(body.transform.translation, body.transform.rotation);
 
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        if (fireCooldown > 0.f){
+            fireCooldown -= dt;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && fireCooldown <= 0.f) {
             shoot(dt, gameObjects);
+            fireCooldown = 0.2f;
         }
 
         for (auto it = bulletsInfo.begin(); it != bulletsInfo.end();){
@@ -41,13 +46,13 @@ namespace my{
         auto &playerTransform = gameObjects.at(playerId).transform;
         bullet.transform.translation = playerTransform.translation; 
         bullet.transform.rotation = playerTransform.rotation; 
-        bullet.transform.scale = glm::vec3{0.2f};
+        bullet.transform.scale = glm::vec3{0.05f, 0.05f, 0.2f};
 
         float yaw = playerTransform.rotation.y;
         float pitch = playerTransform.rotation.x;
         glm::vec3 forwardDir{sin(yaw) * cos(pitch), -sin(pitch), cos(yaw) * cos(pitch)};
 
-        bullet.transform.translation += forwardDir * 2.5f;
+        bullet.transform.translation += forwardDir * 1.5f;
 
         gameObjectBulletInfo bulletInfo{};
         bulletInfo.gameObjectId = bullet.getId();

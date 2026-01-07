@@ -27,6 +27,7 @@ private:
 
     std::shared_ptr<MyModel> bulletModel;
     std::vector<gameObjectBulletInfo> bulletsInfo;
+    float fireCooldown = 0.f;
 };
 
 }
