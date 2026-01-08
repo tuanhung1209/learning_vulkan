@@ -1,4 +1,4 @@
-#include "first_app.hpp"
+#include "game/first_app.hpp"
 
 #include <iostream>
 #include <stdexcept>

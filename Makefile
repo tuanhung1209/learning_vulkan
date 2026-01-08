@@ -1,6 +1,6 @@
 include .env
 
-CFLAGS = -std=c++17 -O2 -I$(TINYOBJ_PATH) -I.
+CFLAGS = -std=c++17 -O2 -I$(TINYOBJ_PATH) -I. -Isrc
 LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
 
 # create list of all spv files and set as dependency
@@ -10,8 +10,9 @@ fragSources = $(shell find ./shaders -type f -name "*.frag")
 fragObjFiles = $(patsubst %.frag, %.frag.spv, $(fragSources))
 
 TARGET = VulkanOut.out
-SOURCES = $(wildcard *.cpp) $(wildcard systems/*.cpp)
-HEADERS = $(wildcard *.hpp) $(wildcard systems/*.hpp)
+# Recursive search for cpp files in src
+SOURCES = $(shell find src -name "*.cpp") main.cpp
+HEADERS = $(shell find src -name "*.hpp")
 
 $(TARGET): $(vertObjFiles) $(fragObjFiles) $(SOURCES) $(HEADERS)
 	g++ $(CFLAGS) -o $(TARGET) $(SOURCES) $(LDFLAGS)
