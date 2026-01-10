@@ -65,8 +65,7 @@ void FirstApp::run() {
         glfwPollEvents();
 
         auto newTime = std::chrono::high_resolution_clock::now();
-        auto frameTime =
-            std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
+        auto frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
         currentTime = newTime;
 
         // may add smallest time frame to prevent frame skipping
@@ -87,6 +86,7 @@ void FirstApp::run() {
             GlobalUbo ubo{};
             ubo.projection = camera.getProjectionMatrix();
             ubo.view = camera.getView();
+            PointLightSystem.update(frameInfo, ubo);
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
             uboBuffers[frameIndex]->flush();
 
@@ -123,6 +123,27 @@ void FirstApp::loadGameObjects() {
     quad.transform.translation = {.0f, .5f, .0f};
     quad.transform.scale = glm::vec3(3.f);
     gameObjects.emplace(quad.getId(), std::move(quad));
+
+    std::vector<glm::vec3> lightColors{
+        {1.f, .1f, .1f},
+        {.1f, .1f, 1.f},
+        {.1f, 1.f, .1f},
+        {1.f, 1.f, .1f},
+        {.1f, 1.f, 1.f},
+        {1.f, 1.f, 1.f} 
+    };
+
+    for (int i = 0; i < lightColors.size(); i++){
+        auto pointLight = MyGameObject::createPointLight(0.2f);
+        pointLight.color = lightColors[i];
+        auto rotateLight = glm::rotate(glm::mat4(1.f), (i * glm::two_pi<float>()) / lightColors.size(),
+                                        {0.f, -1.f, 0.f});
+        pointLight.transform.translation = glm::vec3(rotateLight * glm::vec4(-1.f, -1.f, -1.f, 1.f));
+        gameObjects.emplace(pointLight.getId(), std::move(pointLight));
+
+        
+    }
+
 }
 
 } // namespace my
