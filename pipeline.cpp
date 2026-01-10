@@ -42,7 +42,6 @@ void PipeLine::createGraphicsPipeLine(const std::string &vertFilepath, const std
     assert(configInfo.pipelineLayout != VK_NULL_HANDLE && "no pipelinelayout have been provied");
     assert(configInfo.renderPass != VK_NULL_HANDLE && "no renderpass have been provied");
 
-
     auto vertCode = readFile(vertFilepath);
     auto fragCode = readFile(fragFilepath);
 
@@ -66,8 +65,8 @@ void PipeLine::createGraphicsPipeLine(const std::string &vertFilepath, const std
     shaderStage[1].pNext = nullptr;
     shaderStage[1].pSpecializationInfo = nullptr;
 
-    auto bindingDecription = MyModel::Vertex::getBindingDescriptions();
-    auto attributeDecription = MyModel::Vertex::getAttributeDescriptions();
+    auto& bindingDecription = configInfo.bindingDescription; 
+    auto& attributeDecription = configInfo.attributeDescription;
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -192,5 +191,8 @@ void PipeLine::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo){
     configInfo.dynamicStateInfo.pDynamicStates = configInfo.dynamicStateEnables.data();
     configInfo.dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
     configInfo.dynamicStateInfo.flags = 0;
+
+    configInfo.bindingDescription = MyModel::Vertex::getBindingDescriptions();
+    configInfo.attributeDescription = MyModel::Vertex::getAttributeDescriptions();
 }
 }
