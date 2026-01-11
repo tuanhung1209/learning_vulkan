@@ -21,11 +21,12 @@ $(TARGET): $(vertObjFiles) $(fragObjFiles) $(SOURCES) $(HEADERS)
 %.spv: %
 	glslc $< -o $@
 
-.PHONY: test clean
+.PHONY: test clean shaders
 
 test: VulkanOut.out
 	./VulkanOut.out
 
+shaders: $(vertObjFiles) $(fragObjFiles)
+
 clean:
 	rm -f VulkanOut.out
-	rm -f shaders/*.spv

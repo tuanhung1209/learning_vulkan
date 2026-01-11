@@ -20,6 +20,8 @@ public:
 
     std::vector<gameObjectBulletInfo> getBulletInfo() {return bulletsInfo;}
 
+    MyGameObject::id_t getPlayerId() const { return playerId; }
+
 private:
     MyCamera &camera;
     MyGameObject::id_t playerId;

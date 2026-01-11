@@ -1,3 +1,8 @@
 *.env
 *.vscode
+*.clang-format
+compile_flags.txt
 gemini_notes/
+
+*.spv
+*.out

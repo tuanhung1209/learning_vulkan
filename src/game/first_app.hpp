@@ -8,7 +8,6 @@
 #include "vulkan_core/my_descriptors.hpp"
 
 #include <memory>
-#include <vector>
 
 namespace my{
 

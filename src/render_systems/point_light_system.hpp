@@ -7,7 +7,6 @@
 #include "render_core/my_frame_info.hpp"
 
 #include <memory>
-#include <vector>
 
 namespace my{
 
@@ -19,6 +18,7 @@ public:
         PointLightSystem(const PointLightSystem &) = delete;
         PointLightSystem& operator=(const PointLightSystem &) = delete;
 
+        void update(FrameInfo &frameInfo, GlobalUbo &ubo);
         void renderLight(FrameInfo &frameInfo);
     private:
         void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);

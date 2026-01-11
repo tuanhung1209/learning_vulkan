@@ -7,7 +7,6 @@
 #include "render_core/my_frame_info.hpp"
 
 #include <memory>
-#include <vector>
 
 namespace my{
 
