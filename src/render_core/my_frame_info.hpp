@@ -8,6 +8,7 @@
 
 namespace my{
 #define MAX_LIGHT 10
+#define MAX_BULLET 100
 
 struct PointLight{
     glm::vec4 position{};

@@ -7,6 +7,7 @@ namespace my{
 
     void MyPlayer::update(GLFWwindow *window ,float dt, MyGameObject::Map &gameObjects){
         auto &body = gameObjects.at(playerId);
+
         playerController.moveInPlaneXZ(window, dt, body); 
         camera.setViewYXZ(body.transform.translation, body.transform.rotation);
 

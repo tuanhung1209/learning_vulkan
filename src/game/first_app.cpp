@@ -80,24 +80,26 @@ void FirstApp::run() {
         // may add smallest time frame to prevent frame skipping
 
         mainPlayer.update(window.getWindow(), frameTime, gameObjects);
-        //TODO : create a abtract file for bullets/abundunceStuff handling
-		std::vector<gameObjectBulletInfo> bulletsInfo = mainPlayer.getBulletInfo();
 
-        for (auto it = bulletsInfo.begin(); it != bulletsInfo.end();){
-            auto &bulletInfo = *it;
+        //TODO : create a abtract file for bullets/abundanceStuff handling like industry standard
 
-            if (gameObjects.find(bulletInfo.gameObjectId) != gameObjects.end()){
-                auto &mapBullet = gameObjects.at(bulletInfo.gameObjectId); 
-				if (gameObjects.count(3) > 0 && CollisionSystem::checkCollisionOBB(mapBullet, gameObjects.at(3)).isColliding == true){
-                    health--;
-                    printf("%lld\n", health);
-                    if (health == 0){
-                        gameObjects.erase(3);
-                    }
-				}
-            }
-            it++;
-        }
+		//std::vector<gameObjectBulletInfo> bulletsInfo = mainPlayer.getBulletInfo();
+
+//       for (auto it = bulletsInfo.begin(); it != bulletsInfo.end();){
+//           auto &bulletInfo = *it;
+//
+//           if (gameObjects.find(bulletInfo.gameObjectId) != gameObjects.end()){
+//               auto &mapBullet = gameObjects.at(bulletInfo.gameObjectId); 
+//			if (gameObjects.count(3) > 0 && CollisionSystem::checkCollisionOBB(mapBullet, gameObjects.at(3)).isColliding == true){
+//                   health--;
+//                   printf("%lld\n", health);
+//                   if (health == 0){
+//                       gameObjects.erase(3);
+//                   }
+//			}
+//           }
+//           it++;
+//       }
 
         float aspect = myRenderer.getAspectRatio();
         //camera.setOrthographicProjection(-aspect, aspect, -1, 1, -1, 1);

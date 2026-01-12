@@ -20,6 +20,13 @@ struct PointLightComponent{
     float lightIntensity = 1.0f;
 };
 
+struct BulletComponent{
+    glm::vec3 velocity;
+    glm::vec3 position;
+    float lifeTime;
+    bool isActive = false;
+};
+
 class MyGameObject{
     public:
     using id_t = unsigned int;
@@ -45,17 +52,12 @@ class MyGameObject{
 
     std::shared_ptr<MyModel> model{}; 
     std::unique_ptr<PointLightComponent> pointLight = nullptr;
+    std::unique_ptr<BulletComponent> bullet = nullptr;
 
     private:
     MyGameObject(id_t objId) : id{objId} {}
 
     id_t id;
-};
-
-struct gameObjectBulletInfo{
-    MyGameObject::id_t gameObjectId;
-    glm::vec3 velocity;
-    float lifeTime;
 };
 
 }
