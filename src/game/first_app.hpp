@@ -2,6 +2,7 @@
 
 #include "vulkan_core/window.hpp"
 #include "my_game_object.hpp"
+#include "my_abundance_object_handler.hpp"
 #include "vulkan_core/device.hpp"
 #include "render_core/my_renderer.hpp"
 #include "render_core/my_camera.hpp"

@@ -57,11 +57,15 @@ void FirstApp::run() {
     // camera.setViewDirection(glm::vec3(0.f), glm::vec3(0.7f, 0.f, 1.f));
     camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
     
+    // Initialize Bullet Handler
+    std::shared_ptr<MyModel> bulletModel = MyModel::createModelFromFile(device, "models/cube.obj");
+    BulletHandler bulletHandler{bulletModel};
+
     //TODO : init an id in the main player file
     auto playerObject = MyGameObject::createGameObject();
     playerObject.transform.translation.z = -2.5f;
 
-    MyPlayer mainPlayer{MyModel::createModelFromFile(device, "models/cube.obj"), camera, playerObject.getId()};
+    MyPlayer mainPlayer{camera, playerObject.getId()};
     
     // TODO : test this later for camera position
     
@@ -79,27 +83,8 @@ void FirstApp::run() {
 
         // may add smallest time frame to prevent frame skipping
 
-        mainPlayer.update(window.getWindow(), frameTime, gameObjects);
-
-        //TODO : create a abtract file for bullets/abundanceStuff handling like industry standard
-
-		//std::vector<gameObjectBulletInfo> bulletsInfo = mainPlayer.getBulletInfo();
-
-//       for (auto it = bulletsInfo.begin(); it != bulletsInfo.end();){
-//           auto &bulletInfo = *it;
-//
-//           if (gameObjects.find(bulletInfo.gameObjectId) != gameObjects.end()){
-//               auto &mapBullet = gameObjects.at(bulletInfo.gameObjectId); 
-//			if (gameObjects.count(3) > 0 && CollisionSystem::checkCollisionOBB(mapBullet, gameObjects.at(3)).isColliding == true){
-//                   health--;
-//                   printf("%lld\n", health);
-//                   if (health == 0){
-//                       gameObjects.erase(3);
-//                   }
-//			}
-//           }
-//           it++;
-//       }
+        mainPlayer.update(window.getWindow(), frameTime, gameObjects, bulletHandler);
+        bulletHandler.update(frameTime);
 
         float aspect = myRenderer.getAspectRatio();
         //camera.setOrthographicProjection(-aspect, aspect, -1, 1, -1, 1);
@@ -121,6 +106,10 @@ void FirstApp::run() {
             // line below to render
             myRenderer.beginSwapChainRenderPass(commandBuffer);
             simpleRenderSystem.renderGameObjects(frameInfo);
+            
+            // Render Bullets
+            bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getPipelineLayout());
+
             PointLightSystem.renderLight(frameInfo);
 
             myRenderer.endSwapChainRenderPass(commandBuffer);

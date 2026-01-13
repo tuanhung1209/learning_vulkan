@@ -19,6 +19,8 @@ public:
         SimpleRenderSystem& operator=(const SimpleRenderSystem &) = delete;
 
         void renderGameObjects(FrameInfo &frameInfo);
+
+        VkPipelineLayout getPipelineLayout() const { return pipelineLayout; }
     private:
         void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
         void createPipeline(VkRenderPass renderPass);
