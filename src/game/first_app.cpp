@@ -61,14 +61,12 @@ void FirstApp::run() {
     std::shared_ptr<MyModel> bulletModel = MyModel::createModelFromFile(device, "models/cube.obj");
     BulletHandler bulletHandler{bulletModel};
 
+
     //TODO : init an id in the main player file
     auto playerObject = MyGameObject::createGameObject();
-    playerObject.transform.translation.z = -2.5f;
-
+    playerObject.rigidBody = std::make_unique<RigidBodyComponent>();
+    playerObject.transform.translation = glm::vec3(1.f, -10.f, 1.f);
     MyPlayer mainPlayer{camera, playerObject.getId()};
-    
-    // TODO : test this later for camera position
-    
     gameObjects.emplace(playerObject.getId(), std::move(playerObject));
 
     long long health = 10000;
@@ -107,9 +105,8 @@ void FirstApp::run() {
             myRenderer.beginSwapChainRenderPass(commandBuffer);
             simpleRenderSystem.renderGameObjects(frameInfo);
             
-            // Render Bullets
+            GravitySystem::update(gameObjects, frameTime);
             bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getPipelineLayout());
-
             PointLightSystem.renderLight(frameInfo);
 
             myRenderer.endSwapChainRenderPass(commandBuffer);

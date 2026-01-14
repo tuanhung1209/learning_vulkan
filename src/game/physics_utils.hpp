@@ -27,4 +27,11 @@ private:
 
 };
 
+class GravitySystem{
+public:
+    static void update(MyGameObject::Map& objs, float dt);
+private:
+
+};
+
 };

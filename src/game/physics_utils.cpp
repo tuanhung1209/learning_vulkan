@@ -91,4 +91,19 @@ namespace my{
         return result;        
     }
 
+    void GravitySystem::update(MyGameObject::Map& objs, float dt){
+        for (auto &kv : objs){
+            auto &obj = kv.second;
+            if (obj.rigidBody == nullptr) continue;
+
+            const float GRAVITY = 9.8f;
+            obj.rigidBody->velocity.y += GRAVITY * dt;
+
+            obj.transform.translation += obj.rigidBody->velocity * dt;
+            if (obj.transform.translation.y > 0.0f) {
+                obj.transform.translation.y = 0.0f;
+                obj.rigidBody->velocity.y = 0.0f; 
+            }
+        }
+    }
 };

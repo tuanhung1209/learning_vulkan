@@ -26,6 +26,11 @@ struct BulletComponent{
     bool isActive = false;
 };
 
+struct RigidBodyComponent {
+    glm::vec3 velocity{};
+    float mass{1.0f};
+};
+
 class MyGameObject{
     public:
     using id_t = unsigned int;
@@ -52,6 +57,7 @@ class MyGameObject{
     std::shared_ptr<MyModel> model{}; 
     std::unique_ptr<PointLightComponent> pointLight = nullptr;
     std::unique_ptr<BulletComponent> bulletCom = nullptr;
+    std::unique_ptr<RigidBodyComponent> rigidBody = nullptr;
 
     private:
     MyGameObject(id_t objId) : id{objId} {}
