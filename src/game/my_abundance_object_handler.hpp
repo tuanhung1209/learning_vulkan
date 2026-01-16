@@ -3,10 +3,10 @@
 #include "my_game_object.hpp"
 #include "render_core/my_frame_info.hpp"
 
-namespace my{
+namespace my {
 
-class BulletHandler{
-public:
+class BulletHandler {
+  public:
     BulletHandler(std::shared_ptr<MyModel> model);
     ~BulletHandler();
 
@@ -15,9 +15,10 @@ public:
     void update(float dt);
 
     void renderBullet(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout);
-private:
+
+  private:
     std::vector<std::unique_ptr<MyGameObject>> bullets;
     std::shared_ptr<MyModel> bulletModel;
 };
 
-}
+} // namespace my

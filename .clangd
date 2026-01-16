@@ -1,0 +1,11 @@
+CompileFlags:
+  Add:
+    - -std=c++20
+    - -Isrc
+    - -Ivulkan_core
+    - -Irender_core
+    - -Irender_systems
+
+Diagnostics:
+  UnusedIncludes: None
+  MissingIncludes: None

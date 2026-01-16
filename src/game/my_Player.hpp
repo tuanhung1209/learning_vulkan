@@ -1,16 +1,16 @@
 #pragma once
 
-#include "render_core/my_camera.hpp"
 #include "game/keyboard_movement_controller.hpp"
-#include "game/my_game_object.hpp"
 #include "game/my_abundance_object_handler.hpp"
+#include "game/my_game_object.hpp"
+#include "render_core/my_camera.hpp"
 
 #include <vector>
 
-namespace my{
-class MyPlayer{
-public:
+namespace my {
 
+class MyPlayer {
+  public:
     MyPlayer(MyCamera &camera, MyGameObject::id_t playerId);
 
     ~MyPlayer();
@@ -21,7 +21,7 @@ public:
 
     MyGameObject::id_t getPlayerId() const { return playerId; }
 
-private:
+  private:
     MyCamera &camera;
     MyGameObject::id_t playerId;
     KeyboardMovementController playerController{};
@@ -29,4 +29,4 @@ private:
     float fireCooldown = 0.f;
 };
 
-}
+} // namespace my

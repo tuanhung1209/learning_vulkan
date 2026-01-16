@@ -1,6 +1,6 @@
 #include "my_abundance_object_handler.hpp"
 
-namespace my{
+namespace my {
 
 struct SimplePushConstantData {
     glm::mat4 modelMatrix{1.f};
@@ -17,33 +17,31 @@ BulletHandler::BulletHandler(std::shared_ptr<MyModel> model) : bulletModel{model
     }
 }
 
-BulletHandler::~BulletHandler(){}
+BulletHandler::~BulletHandler() {}
 
-void BulletHandler::spawnBullet(glm::vec3 position, glm::vec3 direction, glm::vec3 rotation){
-    for (auto &bullet : bullets){
-        if (!bullet->bulletCom->isActive){
+void BulletHandler::spawnBullet(glm::vec3 position, glm::vec3 direction, glm::vec3 rotation) {
+    for (auto &bullet : bullets) {
+        if (!bullet->bulletCom->isActive) {
             bullet->bulletCom->isActive = true;
             bullet->transform.translation = position;
             bullet->transform.rotation = rotation;
             bullet->transform.scale = {0.02f, 0.02f, 0.2f};
             bullet->bulletCom->velocity = direction * 15.0f;
-            bullet->bulletCom->lifeTime = 5.0f; 
+            bullet->bulletCom->lifeTime = 5.0f;
             return;
         }
-    }   
+    }
 }
 
-void BulletHandler::update(float dt){
-    for (auto &bullet : bullets){
-        if (bullet->bulletCom->isActive){
+void BulletHandler::update(float dt) {
+    for (auto &bullet : bullets) {
+        if (bullet->bulletCom->isActive) {
             bullet->transform.translation += dt * bullet->bulletCom->velocity;
             bullet->bulletCom->lifeTime -= dt;
 
-            if (bullet->bulletCom->lifeTime <= 0){
-                bullet->bulletCom->isActive = false;
-            }
+            if (bullet->bulletCom->lifeTime <= 0) { bullet->bulletCom->isActive = false; }
         }
-    }   
+    }
 }
 
 void BulletHandler::renderBullet(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) {
@@ -58,16 +56,12 @@ void BulletHandler::renderBullet(VkCommandBuffer commandBuffer, VkPipelineLayout
         push.modelMatrix = bullet->transform.mat4();
         push.normalMatrix = bullet->transform.normalMatrix();
 
-        vkCmdPushConstants(
-            commandBuffer,
-            pipelineLayout,
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-            0,
-            sizeof(SimplePushConstantData),
-            &push);
+        vkCmdPushConstants(commandBuffer, pipelineLayout,
+                           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+                           sizeof(SimplePushConstantData), &push);
 
         bulletModel->draw(commandBuffer);
     }
 }
 
-}
+} // namespace my
