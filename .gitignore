@@ -1,6 +1,7 @@
 *.env
 *.vscode
 *.clang-format
+.clangd
 compile_flags.txt
 gemini_notes/
 
