@@ -25,6 +25,10 @@ class CollisionSystem {
 
     static bool testAxis(const glm::vec3 &axis, const OBB &obbA, const OBB &obbB, float &minOverlap,
                          glm::vec3 &smallestAxis);
+
+    static std::vector<glm::vec3> clip(const std::vector<glm::vec3> &subjectPoly,
+                                       const glm::vec3 &planeNormal, float planeDist);
+    static std::vector<glm::vec3> getFace(const OBB &obb, const glm::vec3 &normal);
 };
 
 class GravitySystem {

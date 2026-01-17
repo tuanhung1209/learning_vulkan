@@ -56,6 +56,77 @@ bool CollisionSystem::testAxis(const glm::vec3 &axis, const OBB &obbA, const OBB
     return true;
 }
 
+std::vector<glm::vec3> CollisionSystem::clip(const std::vector<glm::vec3> &subjectPoly,
+                                             const glm::vec3 &planeNormal, float planeDist) {
+    std::vector<glm::vec3> newPoly;
+    if (subjectPoly.empty()) return newPoly;
+
+    glm::vec3 v1 = subjectPoly.back();
+    float d1 = glm::dot(v1, planeNormal) - planeDist;
+
+    for (size_t i = 0; i < subjectPoly.size(); i++) {
+        glm::vec3 v2 = subjectPoly[i];
+        float d2 = glm::dot(v2, planeNormal) - planeDist;
+
+        if (d1 >= 0.0f && d2 >= 0.0f) {
+            newPoly.push_back(v2);
+        } else if (d1 >= 0.0f && d2 < 0.0f) {
+            float t = d1 / (d1 - d2);
+            glm::vec3 intersection = v1 + t * (v2 - v1);
+            newPoly.push_back(intersection);
+        } else if (d1 < 0.0f && d2 >= 0.0f) {
+            float t = d1 / (d1 - d2);
+            glm::vec3 intersection = v1 + t * (v2 - v1);
+            newPoly.push_back(intersection);
+            newPoly.push_back(v2);
+        }
+
+        v1 = v2;
+        d1 = d2;
+    }
+
+    return newPoly;
+}
+
+std::vector<glm::vec3> CollisionSystem::getFace(const OBB &obb, const glm::vec3 &normal) {
+    int axisIndex = 0;
+    float maxDot = glm::abs(glm::dot(obb.axes[0], normal));
+
+    float dotY = glm::abs(glm::dot(obb.axes[1], normal));
+    if (dotY > maxDot) {
+        maxDot = dotY;
+        axisIndex = 1;
+    }
+
+    float dotZ = glm::abs(glm::dot(obb.axes[2], normal));
+    if (dotZ > maxDot) {
+        maxDot = dotZ;
+        axisIndex = 2;
+    }
+
+    glm::vec3 axis = obb.axes[axisIndex];
+    bool positive = glm::dot(axis, normal) > 0.0f;
+    if (!positive) axis = -axis;
+
+    std::vector<glm::vec3> vertices;
+    vertices.reserve(4);
+
+    glm::vec3 faceCenter = obb.center + axis * obb.extents[axisIndex];
+
+    int i1 = (axisIndex + 1) % 3;
+    int i2 = (axisIndex + 2) % 3;
+
+    glm::vec3 right = obb.axes[i1] * obb.extents[i1];
+    glm::vec3 up = obb.axes[i2] * obb.extents[i2];
+
+    vertices.push_back(faceCenter + right + up);
+    vertices.push_back(faceCenter - right + up);
+    vertices.push_back(faceCenter - right - up);
+    vertices.push_back(faceCenter + right - up);
+
+    return vertices;
+}
+
 collisionManifold CollisionSystem::checkCollisionOBB(MyGameObject &objA, MyGameObject &objB) {
     collisionManifold result{};
     result.depth = std::numeric_limits<float>::max();
@@ -81,8 +152,8 @@ collisionManifold CollisionSystem::checkCollisionOBB(MyGameObject &objA, MyGameO
     for (int i = 0; i < iaxes; i++) {
         if (!testAxis(axesToTest[i], obbA, obbB, result.depth, result.normal)) { return result; }
     }
-    result.isColliding = true;
 
+    result.isColliding = true;
     return result;
 }
 
