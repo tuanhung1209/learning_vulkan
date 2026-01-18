@@ -58,8 +58,8 @@ bool CollisionSystem::testAxis(const glm::vec3 &axis, const OBB &obbA, const OBB
 
 std::vector<glm::vec3> CollisionSystem::clip(const std::vector<glm::vec3> &subjectPoly,
                                              const glm::vec3 &planeNormal, float planeDist) {
-    std::vector<glm::vec3> newPoly;
-    if (subjectPoly.empty()) return newPoly;
+    std::vector<glm::vec3> clipedPoint;
+    if (subjectPoly.empty()) return clipedPoint;
 
     glm::vec3 v1 = subjectPoly.back();
     float d1 = glm::dot(v1, planeNormal) - planeDist;
@@ -69,23 +69,23 @@ std::vector<glm::vec3> CollisionSystem::clip(const std::vector<glm::vec3> &subje
         float d2 = glm::dot(v2, planeNormal) - planeDist;
 
         if (d1 >= 0.0f && d2 >= 0.0f) {
-            newPoly.push_back(v2);
+            clipedPoint.push_back(v2);
         } else if (d1 >= 0.0f && d2 < 0.0f) {
             float t = d1 / (d1 - d2);
             glm::vec3 intersection = v1 + t * (v2 - v1);
-            newPoly.push_back(intersection);
+            clipedPoint.push_back(intersection);
         } else if (d1 < 0.0f && d2 >= 0.0f) {
             float t = d1 / (d1 - d2);
             glm::vec3 intersection = v1 + t * (v2 - v1);
-            newPoly.push_back(intersection);
-            newPoly.push_back(v2);
+            clipedPoint.push_back(intersection);
+            clipedPoint.push_back(v2);
         }
 
         v1 = v2;
         d1 = d2;
     }
 
-    return newPoly;
+    return clipedPoint;
 }
 
 std::vector<glm::vec3> CollisionSystem::getFace(const OBB &obb, const glm::vec3 &normal) {
