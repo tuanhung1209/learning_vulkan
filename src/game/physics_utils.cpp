@@ -154,6 +154,79 @@ collisionManifold CollisionSystem::checkCollisionOBB(MyGameObject &objA, MyGameO
     }
 
     result.isColliding = true;
+
+    OBB *refOBB = &obbA;
+    OBB *incOBB = &obbB;
+
+    if (glm::dot(result.normal, obbB.center - obbA.center) < 0.0f) { result.normal = -result.normal; }
+
+    float dotA = 0.0f;
+    for (int i = 0; i < 3; i++) {
+        float d = glm::abs(glm::dot(obbA.axes[i], result.normal));
+        if (d > dotA) dotA = d;
+    }
+
+    float dotB = 0.0f;
+    for (int i = 0; i < 3; i++) {
+        float d = glm::abs(glm::dot(obbB.axes[i], result.normal));
+        if (d > dotB) dotB = d;
+    }
+
+    bool flip = false;
+    if (dotB > dotA) {
+        refOBB = &obbB;
+        incOBB = &obbA;
+        result.normal = -result.normal;
+        flip = true;
+    }
+
+    std::vector<glm::vec3> incidentFace = getFace(*incOBB, -result.normal);
+
+    int refAxisIdx = 0;
+    float maxDot = 0.0f;
+    for (int i = 0; i < 3; i++) {
+        float d = glm::abs(glm::dot(refOBB->axes[i], result.normal));
+        if (d > maxDot) {
+            maxDot = d;
+            refAxisIdx = i;
+        }
+    }
+
+    std::vector<glm::vec3> poly = incidentFace;
+
+    int i1 = (refAxisIdx + 1) % 3;
+    int i2 = (refAxisIdx + 2) % 3;
+    int sideAxes[] = {i1, i2};
+
+    for (int ax : sideAxes) {
+        {
+            glm::vec3 n = refOBB->axes[ax];
+            glm::vec3 p = refOBB->center + n * refOBB->extents[ax];
+            float dist = glm::dot(n, p);
+            poly = clip(poly, -n, -dist);
+        }
+
+        {
+            glm::vec3 n = refOBB->axes[ax];
+            glm::vec3 p = refOBB->center - n * refOBB->extents[ax];
+            float dist = glm::dot(n, p);
+            poly = clip(poly, n, dist);
+        }
+    }
+
+    glm::vec3 refNormal = refOBB->axes[refAxisIdx];
+    if (glm::dot(refNormal, result.normal) < 0.0f) refNormal = -refNormal;
+
+    float refPlaneDist = glm::dot(refNormal, refOBB->center + refNormal * refOBB->extents[refAxisIdx]);
+
+    for (const auto &pt : poly) {
+        float d = glm::dot(refNormal, pt) - refPlaneDist;
+
+        if (d <= 0.0f) { result.contactPoints.push_back(pt); }
+    }
+
+    if (flip) { result.normal = -result.normal; }
+
     return result;
 }
 
