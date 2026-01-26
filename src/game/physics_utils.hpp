@@ -20,15 +20,19 @@ class CollisionSystem {
   public:
     static collisionManifold checkCollisionOBB(MyGameObject &objA, MyGameObject &objB);
 
+    static void collisionResolve(MyGameObject &objA, MyGameObject &objB,
+                                 collisionManifold &collisionManifold);
+
   private:
     static OBB getOBB(MyGameObject &obj);
-
     static bool testAxis(const glm::vec3 &axis, const OBB &obbA, const OBB &obbB, float &minOverlap,
                          glm::vec3 &smallestAxis);
 
+    static std::vector<glm::vec3> getFace(const OBB &obb, const glm::vec3 &normal);
     static std::vector<glm::vec3> clip(const std::vector<glm::vec3> &subjectPoly,
                                        const glm::vec3 &planeNormal, float planeDist);
-    static std::vector<glm::vec3> getFace(const OBB &obb, const glm::vec3 &normal);
+
+    static void applyImpulse(MyGameObject &objA, MyGameObject &objB, collisionManifold &collisionManifold);
 };
 
 class GravitySystem {

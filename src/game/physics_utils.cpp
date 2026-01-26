@@ -128,8 +128,8 @@ std::vector<glm::vec3> CollisionSystem::getFace(const OBB &obb, const glm::vec3 
 }
 
 collisionManifold CollisionSystem::checkCollisionOBB(MyGameObject &objA, MyGameObject &objB) {
-    collisionManifold result{};
-    result.depth = std::numeric_limits<float>::max();
+    collisionManifold collisionResult{};
+    collisionResult.depth = std::numeric_limits<float>::max();
 
     OBB obbA = getOBB(objA);
     OBB obbB = getOBB(objB);
@@ -150,25 +150,29 @@ collisionManifold CollisionSystem::checkCollisionOBB(MyGameObject &objA, MyGameO
     }
 
     for (int i = 0; i < iaxes; i++) {
-        if (!testAxis(axesToTest[i], obbA, obbB, result.depth, result.normal)) { return result; }
+        if (!testAxis(axesToTest[i], obbA, obbB, collisionResult.depth, collisionResult.normal)) {
+            return collisionResult;
+        }
     }
 
-    result.isColliding = true;
+    collisionResult.isColliding = true;
 
     OBB *refOBB = &obbA;
     OBB *incOBB = &obbB;
 
-    if (glm::dot(result.normal, obbB.center - obbA.center) < 0.0f) { result.normal = -result.normal; }
+    if (glm::dot(collisionResult.normal, obbB.center - obbA.center) < 0.0f) {
+        collisionResult.normal = -collisionResult.normal;
+    }
 
     float dotA = 0.0f;
     for (int i = 0; i < 3; i++) {
-        float d = glm::abs(glm::dot(obbA.axes[i], result.normal));
+        float d = glm::abs(glm::dot(obbA.axes[i], collisionResult.normal));
         if (d > dotA) dotA = d;
     }
 
     float dotB = 0.0f;
     for (int i = 0; i < 3; i++) {
-        float d = glm::abs(glm::dot(obbB.axes[i], result.normal));
+        float d = glm::abs(glm::dot(obbB.axes[i], collisionResult.normal));
         if (d > dotB) dotB = d;
     }
 
@@ -176,16 +180,16 @@ collisionManifold CollisionSystem::checkCollisionOBB(MyGameObject &objA, MyGameO
     if (dotB > dotA) {
         refOBB = &obbB;
         incOBB = &obbA;
-        result.normal = -result.normal;
+        collisionResult.normal = -collisionResult.normal;
         flip = true;
     }
 
-    std::vector<glm::vec3> incidentFace = getFace(*incOBB, -result.normal);
+    std::vector<glm::vec3> incidentFace = getFace(*incOBB, -collisionResult.normal);
 
     int refAxisIdx = 0;
     float maxDot = 0.0f;
     for (int i = 0; i < 3; i++) {
-        float d = glm::abs(glm::dot(refOBB->axes[i], result.normal));
+        float d = glm::abs(glm::dot(refOBB->axes[i], collisionResult.normal));
         if (d > maxDot) {
             maxDot = d;
             refAxisIdx = i;
@@ -215,19 +219,57 @@ collisionManifold CollisionSystem::checkCollisionOBB(MyGameObject &objA, MyGameO
     }
 
     glm::vec3 refNormal = refOBB->axes[refAxisIdx];
-    if (glm::dot(refNormal, result.normal) < 0.0f) refNormal = -refNormal;
+    if (glm::dot(refNormal, collisionResult.normal) < 0.0f) refNormal = -refNormal;
 
     float refPlaneDist = glm::dot(refNormal, refOBB->center + refNormal * refOBB->extents[refAxisIdx]);
 
     for (const auto &pt : poly) {
         float d = glm::dot(refNormal, pt) - refPlaneDist;
 
-        if (d <= 0.0f) { result.contactPoints.push_back(pt); }
+        if (d <= 0.0f) { collisionResult.contactPoints.push_back(pt); }
     }
 
-    if (flip) { result.normal = -result.normal; }
+    if (flip) { collisionResult.normal = -collisionResult.normal; }
 
-    return result;
+    return collisionResult;
+}
+
+void CollisionSystem::applyImpulse(MyGameObject &objA, MyGameObject &objB,
+                                   collisionManifold &collisionManifold) {
+    RigidBodyComponent *rbA = objA.rigidBody.get();
+    RigidBodyComponent *rbB = objB.rigidBody.get();
+
+    float invMassA = (rbA && rbA->mass > 0.0f) ? 1.0f / rbA->mass : 0.0f;
+    float invMassB = (rbB && rbB->mass > 0.0f) ? 1.0f / rbB->mass : 0.0f;
+
+    if (invMassA + invMassB == 0.0f) return;
+
+    glm::vec3 velA = rbA ? rbA->velocity : glm::vec3(0.0f);
+    glm::vec3 velB = rbB ? rbB->velocity : glm::vec3(0.0f);
+
+    glm::vec3 normal = collisionManifold.normal;
+
+    glm::vec3 relVel = velB - velA;
+    float velAlongNormal = glm::dot(relVel, normal);
+
+    if (velAlongNormal > 0) return;
+
+    float restitution = 0.5f;
+    float j = -(1.0f + restitution) * velAlongNormal;
+    j /= (invMassA + invMassB);
+
+    glm::vec3 impulse = j * normal;
+
+    if (rbA) rbA->velocity -= impulse * invMassA;
+    if (rbB) rbB->velocity += impulse * invMassB;
+}
+
+void CollisionSystem::collisionResolve(MyGameObject &objA, MyGameObject &objB,
+                                       collisionManifold &collisionManifold) {
+    if (!collisionManifold.isColliding) return;
+
+    const int iteration = 4;
+    for (int i = 0; i < iteration; i++) { applyImpulse(objA, objB, collisionManifold); }
 }
 
 void GravitySystem::update(MyGameObject::Map &objs, float dt) {
@@ -236,12 +278,9 @@ void GravitySystem::update(MyGameObject::Map &objs, float dt) {
         if (obj.rigidBody == nullptr) continue;
 
         const float GRAVITY = 9.8f;
-        obj.rigidBody->velocity.y += GRAVITY * dt;
-
-        obj.transform.translation += obj.rigidBody->velocity * dt;
-        if (obj.transform.translation.y > 0.0f) {
-            obj.transform.translation.y = 0.0f;
-            obj.rigidBody->velocity.y = 0.0f;
+        if (obj.rigidBody->mass > 0.0f) {
+            obj.rigidBody->velocity.y += GRAVITY * dt;
+            obj.transform.translation += obj.rigidBody->velocity * dt;
         }
     }
 }

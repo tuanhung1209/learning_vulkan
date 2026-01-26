@@ -106,6 +106,28 @@ void FirstApp::run() {
             simpleRenderSystem.renderGameObjects(frameInfo);
 
             GravitySystem::update(gameObjects, frameTime);
+
+            // Physics Update Loop
+            for (auto &objA : gameObjects) {
+                for (auto &objB : gameObjects) {
+                    if (objA.first == objB.first) continue;
+                    if (objA.second.rigidBody == nullptr && objB.second.rigidBody == nullptr) continue;
+
+                    auto manifold = CollisionSystem::checkCollisionOBB(objA.second, objB.second);
+                    if (manifold.isColliding) {
+                        CollisionSystem::collisionResolve(objA.second, objB.second, manifold);
+                    }
+                }
+            }
+
+            if (glfwGetKey(window.getWindow(), GLFW_KEY_F) == GLFW_PRESS) {
+                for (auto &kv : gameObjects) {
+                    if (kv.second.rigidBody && kv.second.rigidBody->mass == 1.0f) {
+                        kv.second.rigidBody->velocity += glm::vec3(0.f, -5.f, 0.f) * frameTime;
+                    }
+                }
+            }
+
             bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getPipelineLayout());
             PointLightSystem.renderLight(frameInfo);
 
@@ -117,34 +139,34 @@ void FirstApp::run() {
 }
 
 void FirstApp::loadGameObjects() {
-    std::shared_ptr<MyModel> gameModel = MyModel::createModelFromFile(device, "models/smooth_vase.obj");
-    auto smoothVase = MyGameObject::createGameObject();
-    smoothVase.model = gameModel;
-    smoothVase.transform.translation = {-.5f, .5f, .0f};
-    smoothVase.transform.scale = glm::vec3(3.f);
-    gameObjects.emplace(smoothVase.getId(), std::move(smoothVase));
-
-    std::shared_ptr<MyModel> gameModel1 = MyModel::createModelFromFile(device, "models/flat_vase.obj");
-    auto flatVase = MyGameObject::createGameObject();
-    flatVase.model = gameModel1;
-    flatVase.transform.translation = {.5f, .5f, .0f};
-    flatVase.transform.scale = glm::vec3(3.f);
-    gameObjects.emplace(flatVase.getId(), std::move(flatVase));
-
-    std::shared_ptr<MyModel> gameModel2 = MyModel::createModelFromFile(device, "models/quad.obj");
-    auto quad = MyGameObject::createGameObject();
-    quad.model = gameModel2;
-    quad.transform.translation = {.0f, .5f, .0f};
-    quad.transform.scale = glm::vec3(3.f);
-    gameObjects.emplace(quad.getId(), std::move(quad));
-
-    // Target Box (This will be ID 3)
     std::shared_ptr<MyModel> cubeModel = MyModel::createModelFromFile(device, "models/colored_cube.obj");
-    auto cube = MyGameObject::createGameObject();
-    cube.model = cubeModel;
-    cube.transform.translation = {1.5f, .5f, .0f};
-    cube.transform.scale = {0.5f, 0.5f, 0.5f};
-    gameObjects.emplace(cube.getId(), std::move(cube));
+
+    // Floor
+    auto floor = MyGameObject::createGameObject();
+    floor.model = cubeModel;
+    floor.transform.translation = {0.f, 0.5f, 0.f};
+    floor.transform.scale = {10.f, 0.2f, 10.f};
+    floor.rigidBody = std::make_unique<RigidBodyComponent>();
+    floor.rigidBody->mass = 0.0f; // Infinite mass
+    gameObjects.emplace(floor.getId(), std::move(floor));
+
+    // Dynamic Cube 1
+    auto cube1 = MyGameObject::createGameObject();
+    cube1.model = cubeModel;
+    cube1.transform.translation = {-0.5f, -3.f, 0.f};
+    cube1.transform.scale = {0.5f, 0.5f, 0.5f};
+    cube1.rigidBody = std::make_unique<RigidBodyComponent>();
+    cube1.rigidBody->mass = 1.0f;
+    gameObjects.emplace(cube1.getId(), std::move(cube1));
+
+    // Dynamic Cube 2
+    auto cube2 = MyGameObject::createGameObject();
+    cube2.model = cubeModel;
+    cube2.transform.translation = {0.5f, -5.f, 0.f}; // Higher up
+    cube2.transform.scale = {0.5f, 0.5f, 0.5f};
+    cube2.rigidBody = std::make_unique<RigidBodyComponent>();
+    cube2.rigidBody->mass = 2.0f; // Heavier
+    gameObjects.emplace(cube2.getId(), std::move(cube2));
 
     std::vector<glm::vec3> lightColors{{1.f, .1f, .1f}, {.1f, .1f, 1.f}, {.1f, 1.f, .1f},
                                        {1.f, 1.f, .1f}, {.1f, 1.f, 1.f}, {1.f, 1.f, 1.f}};
