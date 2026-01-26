@@ -265,7 +265,7 @@ void CollisionSystem::applyImpulse(MyGameObject &objA, MyGameObject &objB,
 }
 
 void CollisionSystem::linearProjection(MyGameObject &objA, MyGameObject &objB,
-                                      collisionManifold &collisionManifold) {
+                                       collisionManifold &collisionManifold) {
     RigidBodyComponent *rbA = objA.rigidBody.get();
     RigidBodyComponent *rbB = objB.rigidBody.get();
 
@@ -274,8 +274,8 @@ void CollisionSystem::linearProjection(MyGameObject &objA, MyGameObject &objB,
 
     const float slack = 0.01f;
     const float percent = 0.8f;
-    glm::vec3 correction =
-        std::max(collisionManifold.depth - slack, 0.0f) / (invMassA + invMassB) * percent * collisionManifold.normal;
+    glm::vec3 correction = std::max(collisionManifold.depth - slack, 0.0f) / (invMassA + invMassB) * percent *
+                           collisionManifold.normal;
 
     if (rbA && rbA->mass > 0.0f) objA.transform.translation -= invMassA * correction;
     if (rbB && rbB->mass > 0.0f) objB.transform.translation += invMassB * correction;
@@ -297,6 +297,11 @@ void GravitySystem::update(MyGameObject::Map &objs, float dt) {
         const float GRAVITY = 9.8f;
         if (obj.rigidBody->mass > 0.0f) {
             obj.rigidBody->velocity.y += GRAVITY * dt;
+
+            const float damping = 2.0f;
+            obj.rigidBody->velocity.x *= glm::max(0.0f, 1.0f - damping * dt);
+            obj.rigidBody->velocity.z *= glm::max(0.0f, 1.0f - damping * dt);
+
             obj.transform.translation += obj.rigidBody->velocity * dt;
         }
     }

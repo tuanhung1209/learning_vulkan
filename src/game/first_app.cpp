@@ -63,7 +63,7 @@ void FirstApp::run() {
 
     // TODO : init an id in the main player file
     auto playerObject = MyGameObject::createGameObject();
-    // playerObject.rigidBody = std::make_unique<RigidBodyComponent>(); // Removed to stop interaction
+    playerObject.rigidBody = std::make_unique<RigidBodyComponent>();
     playerObject.transform.translation = glm::vec3(1.f, -10.f, 1.f);
     MyPlayer mainPlayer{camera, playerObject.getId()};
     gameObjects.emplace(playerObject.getId(), std::move(playerObject));
@@ -122,8 +122,8 @@ void FirstApp::run() {
 
             if (glfwGetKey(window.getWindow(), GLFW_KEY_F) == GLFW_PRESS) {
                 for (auto &kv : gameObjects) {
-                    if (kv.second.rigidBody && kv.second.rigidBody->mass == 1.0f) {
-                        kv.second.rigidBody->velocity.y = -5.0f; // Instant upward velocity
+                    if (kv.second.rigidBody && kv.second.rigidBody->mass == 2.0f) {
+                        kv.second.rigidBody->velocity.x = -5.0f;
                     }
                 }
             }
@@ -141,31 +141,28 @@ void FirstApp::run() {
 void FirstApp::loadGameObjects() {
     std::shared_ptr<MyModel> cubeModel = MyModel::createModelFromFile(device, "models/colored_cube.obj");
 
-    // Floor
     auto floor = MyGameObject::createGameObject();
     floor.model = cubeModel;
     floor.transform.translation = {0.f, 0.5f, 0.f};
     floor.transform.scale = {10.f, 0.2f, 10.f};
     floor.rigidBody = std::make_unique<RigidBodyComponent>();
-    floor.rigidBody->mass = 0.0f; // Infinite mass
+    floor.rigidBody->mass = 0.0f;
     gameObjects.emplace(floor.getId(), std::move(floor));
 
-    // Dynamic Cube 1
     auto cube1 = MyGameObject::createGameObject();
     cube1.model = cubeModel;
-    cube1.transform.translation = {-0.5f, -3.f, 0.f};
+    cube1.transform.translation = {-1.5f, -3.f, 0.f};
     cube1.transform.scale = {0.5f, 0.5f, 0.5f};
     cube1.rigidBody = std::make_unique<RigidBodyComponent>();
     cube1.rigidBody->mass = 1.0f;
     gameObjects.emplace(cube1.getId(), std::move(cube1));
 
-    // Dynamic Cube 2
     auto cube2 = MyGameObject::createGameObject();
     cube2.model = cubeModel;
-    cube2.transform.translation = {0.5f, -5.f, 0.f}; // Higher up
+    cube2.transform.translation = {0.5f, -5.f, 0.f};
     cube2.transform.scale = {0.5f, 0.5f, 0.5f};
     cube2.rigidBody = std::make_unique<RigidBodyComponent>();
-    cube2.rigidBody->mass = 2.0f; // Heavier
+    cube2.rigidBody->mass = 2.0f;
     gameObjects.emplace(cube2.getId(), std::move(cube2));
 
     std::vector<glm::vec3> lightColors{{1.f, .1f, .1f}, {.1f, .1f, 1.f}, {.1f, 1.f, .1f},
