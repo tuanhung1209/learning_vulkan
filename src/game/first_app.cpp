@@ -63,7 +63,7 @@ void FirstApp::run() {
 
     // TODO : init an id in the main player file
     auto playerObject = MyGameObject::createGameObject();
-    playerObject.rigidBody = std::make_unique<RigidBodyComponent>();
+    // playerObject.rigidBody = std::make_unique<RigidBodyComponent>(); // Removed to stop interaction
     playerObject.transform.translation = glm::vec3(1.f, -10.f, 1.f);
     MyPlayer mainPlayer{camera, playerObject.getId()};
     gameObjects.emplace(playerObject.getId(), std::move(playerObject));
@@ -110,8 +110,8 @@ void FirstApp::run() {
             // Physics Update Loop
             for (auto &objA : gameObjects) {
                 for (auto &objB : gameObjects) {
-                    if (objA.first == objB.first) continue;
-                    if (objA.second.rigidBody == nullptr && objB.second.rigidBody == nullptr) continue;
+                    if (objA.first <= objB.first) continue;
+                    if (objA.second.rigidBody == nullptr || objB.second.rigidBody == nullptr) continue;
 
                     auto manifold = CollisionSystem::checkCollisionOBB(objA.second, objB.second);
                     if (manifold.isColliding) {
@@ -123,7 +123,7 @@ void FirstApp::run() {
             if (glfwGetKey(window.getWindow(), GLFW_KEY_F) == GLFW_PRESS) {
                 for (auto &kv : gameObjects) {
                     if (kv.second.rigidBody && kv.second.rigidBody->mass == 1.0f) {
-                        kv.second.rigidBody->velocity += glm::vec3(0.f, -5.f, 0.f) * frameTime;
+                        kv.second.rigidBody->velocity.y = -5.0f; // Instant upward velocity
                     }
                 }
             }

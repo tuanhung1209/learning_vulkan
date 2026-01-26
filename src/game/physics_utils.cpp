@@ -264,12 +264,29 @@ void CollisionSystem::applyImpulse(MyGameObject &objA, MyGameObject &objB,
     if (rbB) rbB->velocity += impulse * invMassB;
 }
 
+void CollisionSystem::linearProjection(MyGameObject &objA, MyGameObject &objB,
+                                      collisionManifold &collisionManifold) {
+    RigidBodyComponent *rbA = objA.rigidBody.get();
+    RigidBodyComponent *rbB = objB.rigidBody.get();
+
+    float invMassA = (rbA && rbA->mass > 0.0f) ? 1.0f / rbA->mass : 0.0f;
+    float invMassB = (rbB && rbB->mass > 0.0f) ? 1.0f / rbB->mass : 0.0f;
+
+    const float slack = 0.01f;
+    const float percent = 0.8f;
+    glm::vec3 correction =
+        std::max(collisionManifold.depth - slack, 0.0f) / (invMassA + invMassB) * percent * collisionManifold.normal;
+
+    if (rbA && rbA->mass > 0.0f) objA.transform.translation -= invMassA * correction;
+    if (rbB && rbB->mass > 0.0f) objB.transform.translation += invMassB * correction;
+}
+
 void CollisionSystem::collisionResolve(MyGameObject &objA, MyGameObject &objB,
                                        collisionManifold &collisionManifold) {
     if (!collisionManifold.isColliding) return;
 
-    const int iteration = 4;
-    for (int i = 0; i < iteration; i++) { applyImpulse(objA, objB, collisionManifold); }
+    applyImpulse(objA, objB, collisionManifold);
+    linearProjection(objA, objB, collisionManifold);
 }
 
 void GravitySystem::update(MyGameObject::Map &objs, float dt) {
