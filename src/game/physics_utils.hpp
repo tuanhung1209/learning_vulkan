@@ -33,7 +33,8 @@ class CollisionSystem {
                                        const glm::vec3 &planeNormal, float planeDist);
 
     static void applyImpulse(MyGameObject &objA, MyGameObject &objB, collisionManifold &collisionManifold);
-    static void linearProjection(MyGameObject &objA, MyGameObject &objB, collisionManifold &collisionManifold);
+    static void linearProjection(MyGameObject &objA, MyGameObject &objB,
+                                 collisionManifold &collisionManifold);
 };
 
 class GravitySystem {

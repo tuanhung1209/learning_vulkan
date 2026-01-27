@@ -28,7 +28,12 @@ struct BulletComponent {
 
 struct RigidBodyComponent {
     glm::vec3 velocity{};
+    glm::vec3 angularVelocity{};
     float mass{1.0f};
+    float invInertia{0.0f};
+
+    bool isSleeping{false};
+    float sleepTimer{0.0f};
 };
 
 class MyGameObject {

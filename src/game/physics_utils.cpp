@@ -31,7 +31,6 @@ bool CollisionSystem::testAxis(const glm::vec3 &axis, const OBB &obbA, const OBB
     float parallelAxis = glm::dot(axis, axis);
     if (parallelAxis < 1e-8f) return true;
 
-    // TODO : invesigate this ???
     glm::vec3 nAxis = axis / std::sqrt(parallelAxis);
 
     float rA = glm::abs(glm::dot(obbA.axes[0], nAxis) * obbA.extents.x) +
@@ -246,22 +245,52 @@ void CollisionSystem::applyImpulse(MyGameObject &objA, MyGameObject &objB,
 
     glm::vec3 velA = rbA ? rbA->velocity : glm::vec3(0.0f);
     glm::vec3 velB = rbB ? rbB->velocity : glm::vec3(0.0f);
+    glm::vec3 angVelA = rbA ? rbA->angularVelocity : glm::vec3(0.0f);
+    glm::vec3 angVelB = rbB ? rbB->angularVelocity : glm::vec3(0.0f);
 
     glm::vec3 normal = collisionManifold.normal;
 
-    glm::vec3 relVel = velB - velA;
+    glm::vec3 contactPoint = glm::vec3(0.0f);
+    if (collisionManifold.contactPoints.empty()) {
+        return;
+    } else {
+        for (const auto &point : collisionManifold.contactPoints) { contactPoint += point; }
+        contactPoint /= static_cast<float>(collisionManifold.contactPoints.size());
+    }
+
+    glm::vec3 rA = contactPoint - objA.transform.translation;
+    glm::vec3 rB = contactPoint - objB.transform.translation;
+
+    glm::vec3 relVel = (velB + glm::cross(angVelB, rB)) - (velA + glm::cross(angVelA, rA));
     float velAlongNormal = glm::dot(relVel, normal);
 
     if (velAlongNormal > 0) return;
 
-    float restitution = 0.5f;
+    float restitution = 0.3f;
+    if (glm::abs(velAlongNormal) < 0.5f) { restitution = 0.0f; }
+
+    float invInertiaA = rbA ? rbA->invInertia : 0.0f;
+    float invInertiaB = rbB ? rbB->invInertia : 0.0f;
+
+    glm::vec3 raxn = glm::cross(rA, normal);
+    glm::vec3 rbxn = glm::cross(rB, normal);
+    float angularFactor = glm::dot(raxn, raxn) * invInertiaA + glm::dot(rbxn, rbxn) * invInertiaB;
+
     float j = -(1.0f + restitution) * velAlongNormal;
-    j /= (invMassA + invMassB);
+    j /= (invMassA + invMassB + angularFactor * 0.5f);
 
     glm::vec3 impulse = j * normal;
 
-    if (rbA) rbA->velocity -= impulse * invMassA;
-    if (rbB) rbB->velocity += impulse * invMassB;
+    if (rbA) {
+        rbA->velocity -= impulse * invMassA;
+        glm::vec3 torqueImpulse = glm::cross(rA, impulse);
+        rbA->angularVelocity -= rbA->invInertia * torqueImpulse * 0.5f;
+    }
+    if (rbB) {
+        rbB->velocity += impulse * invMassB;
+        glm::vec3 torqueImpulse = glm::cross(rB, impulse);
+        rbB->angularVelocity += rbB->invInertia * torqueImpulse * 0.5f;
+    }
 }
 
 void CollisionSystem::linearProjection(MyGameObject &objA, MyGameObject &objB,
@@ -285,24 +314,98 @@ void CollisionSystem::collisionResolve(MyGameObject &objA, MyGameObject &objB,
                                        collisionManifold &collisionManifold) {
     if (!collisionManifold.isColliding) return;
 
+    // Wake up sleeping objects when they collide
+    if (objA.rigidBody && objA.rigidBody->isSleeping) {
+        objA.rigidBody->isSleeping = false;
+        objA.rigidBody->sleepTimer = 0.0f;
+    }
+    if (objB.rigidBody && objB.rigidBody->isSleeping) {
+        objB.rigidBody->isSleeping = false;
+        objB.rigidBody->sleepTimer = 0.0f;
+    }
+
     applyImpulse(objA, objB, collisionManifold);
     linearProjection(objA, objB, collisionManifold);
 }
 
 void GravitySystem::update(MyGameObject::Map &objs, float dt) {
+    float physicsDt = std::min(dt, 0.033f);
+
     for (auto &kv : objs) {
         auto &obj = kv.second;
         if (obj.rigidBody == nullptr) continue;
+        if (obj.rigidBody->mass <= 0.0f) continue; // Skip static objects
+
+        // Skip sleeping objects - they don't need physics updates
+        if (obj.rigidBody->isSleeping) { continue; }
 
         const float GRAVITY = 9.8f;
-        if (obj.rigidBody->mass > 0.0f) {
-            obj.rigidBody->velocity.y += GRAVITY * dt;
 
-            const float damping = 2.0f;
-            obj.rigidBody->velocity.x *= glm::max(0.0f, 1.0f - damping * dt);
-            obj.rigidBody->velocity.z *= glm::max(0.0f, 1.0f - damping * dt);
+        // Apply gravity
+        obj.rigidBody->velocity.y += GRAVITY * physicsDt;
 
-            obj.transform.translation += obj.rigidBody->velocity * dt;
+        // Only damp horizontal movement (not vertical falling)
+        const float horizontalDamping = 0.98f;
+        obj.rigidBody->velocity.x *= horizontalDamping;
+        obj.rigidBody->velocity.z *= horizontalDamping;
+
+        const float angularDamping = 0.98f;
+        obj.rigidBody->angularVelocity *= angularDamping;
+
+        // Velocity clamping to prevent tunneling
+        const float MAX_VELOCITY = 30.0f;
+        float speed = glm::length(obj.rigidBody->velocity);
+        if (speed > MAX_VELOCITY) {
+            obj.rigidBody->velocity = (obj.rigidBody->velocity / speed) * MAX_VELOCITY;
+        }
+
+        // Check for NaN
+        if (std::isnan(obj.rigidBody->velocity.x) || std::isnan(obj.rigidBody->velocity.y) ||
+            std::isnan(obj.rigidBody->velocity.z)) {
+            obj.rigidBody->velocity = glm::vec3(0.0f);
+        }
+
+        // Update position
+        obj.transform.translation += obj.rigidBody->velocity * physicsDt;
+
+        // Angular velocity limit
+        float angSpeed = glm::length(obj.rigidBody->angularVelocity);
+        if (angSpeed > 8.0f) {
+            obj.rigidBody->angularVelocity = (obj.rigidBody->angularVelocity / angSpeed) * 8.0f;
+        }
+
+        if (std::isnan(obj.rigidBody->angularVelocity.x) || std::isnan(obj.rigidBody->angularVelocity.y) ||
+            std::isnan(obj.rigidBody->angularVelocity.z)) {
+            obj.rigidBody->angularVelocity = glm::vec3(0.0f);
+        }
+
+        // Update rotation
+        obj.transform.rotation += obj.rigidBody->angularVelocity * physicsDt;
+
+        // ═══════════════════════════════════════════════════════════
+        // SLEEP SYSTEM: Put objects to sleep when they stop moving
+        // ═══════════════════════════════════════════════════════════
+        float linearSpeed = glm::length(obj.rigidBody->velocity);
+        float angularSpeed = glm::length(obj.rigidBody->angularVelocity);
+        float totalMotion = linearSpeed + angularSpeed;
+
+        // Threshold for considering object "at rest"
+        const float SLEEP_THRESHOLD = 0.15f;
+        const float SLEEP_TIME = 0.3f; // Must be still for 0.3 seconds
+
+        if (totalMotion < SLEEP_THRESHOLD) {
+            // Object is moving very slowly
+            obj.rigidBody->sleepTimer += physicsDt;
+
+            if (obj.rigidBody->sleepTimer > SLEEP_TIME) {
+                // Object has been still long enough - put it to sleep
+                obj.rigidBody->isSleeping = true;
+                obj.rigidBody->velocity = glm::vec3(0.0f);
+                obj.rigidBody->angularVelocity = glm::vec3(0.0f);
+            }
+        } else {
+            // Object is moving - reset sleep timer
+            obj.rigidBody->sleepTimer = 0.0f;
         }
     }
 }

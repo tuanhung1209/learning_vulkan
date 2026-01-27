@@ -79,10 +79,33 @@ void FirstApp::run() {
             std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
         currentTime = newTime;
 
-        // may add smallest time frame to prevent frame skipping
+        frameTime = std::min(frameTime, 0.05f);
 
+        // line below to update
         mainPlayer.update(window.getWindow(), frameTime, gameObjects, bulletHandler);
         bulletHandler.update(frameTime);
+        GravitySystem::update(gameObjects, frameTime);
+
+        // Physics Update Loop
+        for (auto &objA : gameObjects) {
+            for (auto &objB : gameObjects) {
+                if (objA.first <= objB.first) continue;
+                if (objA.second.rigidBody == nullptr || objB.second.rigidBody == nullptr) continue;
+
+                auto manifold = CollisionSystem::checkCollisionOBB(objA.second, objB.second);
+                if (manifold.isColliding) {
+                    CollisionSystem::collisionResolve(objA.second, objB.second, manifold);
+                }
+            }
+        }
+
+        if (glfwGetKey(window.getWindow(), GLFW_KEY_F) == GLFW_PRESS) {
+            for (auto &kv : gameObjects) {
+                if (kv.second.rigidBody && kv.second.rigidBody->mass == 2.0f) {
+                    kv.second.rigidBody->velocity.x = -5.0f;
+                }
+            }
+        }
 
         float aspect = myRenderer.getAspectRatio();
         // camera.setOrthographicProjection(-aspect, aspect, -1, 1, -1, 1);
@@ -104,29 +127,6 @@ void FirstApp::run() {
             // line below to render
             myRenderer.beginSwapChainRenderPass(commandBuffer);
             simpleRenderSystem.renderGameObjects(frameInfo);
-
-            GravitySystem::update(gameObjects, frameTime);
-
-            // Physics Update Loop
-            for (auto &objA : gameObjects) {
-                for (auto &objB : gameObjects) {
-                    if (objA.first <= objB.first) continue;
-                    if (objA.second.rigidBody == nullptr || objB.second.rigidBody == nullptr) continue;
-
-                    auto manifold = CollisionSystem::checkCollisionOBB(objA.second, objB.second);
-                    if (manifold.isColliding) {
-                        CollisionSystem::collisionResolve(objA.second, objB.second, manifold);
-                    }
-                }
-            }
-
-            if (glfwGetKey(window.getWindow(), GLFW_KEY_F) == GLFW_PRESS) {
-                for (auto &kv : gameObjects) {
-                    if (kv.second.rigidBody && kv.second.rigidBody->mass == 2.0f) {
-                        kv.second.rigidBody->velocity.x = -5.0f;
-                    }
-                }
-            }
 
             bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getPipelineLayout());
             PointLightSystem.renderLight(frameInfo);
@@ -151,10 +151,11 @@ void FirstApp::loadGameObjects() {
 
     auto cube1 = MyGameObject::createGameObject();
     cube1.model = cubeModel;
-    cube1.transform.translation = {-1.5f, -3.f, 0.f};
+    cube1.transform.translation = {-0.5f, -3.f, 0.f};
     cube1.transform.scale = {0.5f, 0.5f, 0.5f};
     cube1.rigidBody = std::make_unique<RigidBodyComponent>();
     cube1.rigidBody->mass = 1.0f;
+    cube1.rigidBody->invInertia = 1.0f / 0.0416f;
     gameObjects.emplace(cube1.getId(), std::move(cube1));
 
     auto cube2 = MyGameObject::createGameObject();
@@ -163,6 +164,7 @@ void FirstApp::loadGameObjects() {
     cube2.transform.scale = {0.5f, 0.5f, 0.5f};
     cube2.rigidBody = std::make_unique<RigidBodyComponent>();
     cube2.rigidBody->mass = 2.0f;
+    cube2.rigidBody->invInertia = 1.0f / 0.0833f;
     gameObjects.emplace(cube2.getId(), std::move(cube2));
 
     std::vector<glm::vec3> lightColors{{1.f, .1f, .1f}, {.1f, .1f, 1.f}, {.1f, 1.f, .1f},
