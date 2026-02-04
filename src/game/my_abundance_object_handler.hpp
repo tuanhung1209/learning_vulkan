@@ -16,6 +16,8 @@ class BulletHandler {
 
     void renderBullet(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout);
 
+    std::vector<std::unique_ptr<MyGameObject>> &getBullets() { return bullets; }
+
   private:
     std::vector<std::unique_ptr<MyGameObject>> bullets;
     std::shared_ptr<MyModel> bulletModel;

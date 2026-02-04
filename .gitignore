@@ -4,6 +4,7 @@
 .clangd
 compile_flags.txt
 gemini_notes/
+CLAUDE.md
 
 *.spv
 *.out
