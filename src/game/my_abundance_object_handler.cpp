@@ -1,4 +1,5 @@
 #include "my_abundance_object_handler.hpp"
+#include <memory>
 
 namespace my {
 
@@ -12,6 +13,7 @@ BulletHandler::BulletHandler(std::shared_ptr<MyModel> model) : bulletModel{model
     for (int i = 0; i < MAX_BULLET; i++) {
         auto bullet = MyGameObject::createGameObject();
         bullet.bulletCom = std::make_unique<BulletComponent>();
+        bullet.rigidBody = std::make_unique<RigidBodyComponent>();
         bullet.transform.scale = {0.1f, 0.1f, 0.1f};
         bullets.push_back(std::make_unique<MyGameObject>(std::move(bullet)));
     }
@@ -26,8 +28,15 @@ void BulletHandler::spawnBullet(glm::vec3 position, glm::vec3 direction, glm::ve
             bullet->transform.translation = position;
             bullet->transform.rotation = rotation;
             bullet->transform.scale = {0.02f, 0.02f, 0.2f};
-            bullet->bulletCom->velocity = direction * 15.0f;
+
+            bullet->bulletCom->velocity = direction * 30.0f;  // Fast bullet
             bullet->bulletCom->lifeTime = 5.0f;
+
+            bullet->rigidBody->velocity = bullet->bulletCom->velocity;
+            bullet->rigidBody->mass = 50.0f;
+            bullet->rigidBody->restitution = 0.0f;
+            bullet->rigidBody->computeBoxInertia(bullet->transform.scale * 0.5f);
+
             return;
         }
     }
@@ -38,6 +47,9 @@ void BulletHandler::update(float dt) {
         if (bullet->bulletCom->isActive) {
             bullet->transform.translation += dt * bullet->bulletCom->velocity;
             bullet->bulletCom->lifeTime -= dt;
+
+            // Sync rigidBody velocity for collision detection
+            bullet->rigidBody->velocity = bullet->bulletCom->velocity;
 
             if (bullet->bulletCom->lifeTime <= 0) { bullet->bulletCom->isActive = false; }
         }

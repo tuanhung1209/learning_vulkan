@@ -1,6 +1,13 @@
 #include "game/physics_utils.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 namespace my {
+
+// ═══════════════════════════════════════════════════════════════════
+// COLLISION DETECTION (OBB / SAT) — unchanged from original
+// ═══════════════════════════════════════════════════════════════════
 
 OBB CollisionSystem::getOBB(MyGameObject &obj) {
     OBB obb;
@@ -31,7 +38,6 @@ bool CollisionSystem::testAxis(const glm::vec3 &axis, const OBB &obbA, const OBB
     float parallelAxis = glm::dot(axis, axis);
     if (parallelAxis < 1e-8f) return true;
 
-    // TODO : invesigate this ???
     glm::vec3 nAxis = axis / std::sqrt(parallelAxis);
 
     float rA = glm::abs(glm::dot(obbA.axes[0], nAxis) * obbA.extents.x) +
@@ -234,53 +240,370 @@ collisionManifold CollisionSystem::checkCollisionOBB(MyGameObject &objA, MyGameO
     return collisionResult;
 }
 
-void CollisionSystem::applyImpulse(MyGameObject &objA, MyGameObject &objB,
-                                   collisionManifold &collisionManifold) {
-    RigidBodyComponent *rbA = objA.rigidBody.get();
-    RigidBodyComponent *rbB = objB.rigidBody.get();
+// ═══════════════════════════════════════════════════════════════════
+// PHYSICS WORLD — Sequential Impulse Solver (Box2D / Bullet style)
+// ═══════════════════════════════════════════════════════════════════
 
-    float invMassA = (rbA && rbA->mass > 0.0f) ? 1.0f / rbA->mass : 0.0f;
-    float invMassB = (rbB && rbB->mass > 0.0f) ? 1.0f / rbB->mass : 0.0f;
+void PhysicsWorld::step(MyGameObject::Map &objs,
+                        std::vector<std::unique_ptr<MyGameObject>> &bullets,
+                        float frameTime) {
+    frameTime = std::min(frameTime, 0.05f);
+    accumulator += frameTime;
 
-    if (invMassA + invMassB == 0.0f) return;
+    while (accumulator >= FIXED_DT) {
+        // 1. Apply forces (gravity) and damping
+        integrateForces(objs, FIXED_DT);
 
-    glm::vec3 velA = rbA ? rbA->velocity : glm::vec3(0.0f);
-    glm::vec3 velB = rbB ? rbB->velocity : glm::vec3(0.0f);
+        // 2. Broadphase + narrowphase collision detection
+        auto contacts = detectCollisions(objs);
 
-    glm::vec3 normal = collisionManifold.normal;
+        // 3. Wake sleeping objects involved in collisions
+        for (auto &c : contacts) {
+            if (c.objA->rigidBody && c.objA->rigidBody->isSleeping) {
+                c.objA->rigidBody->isSleeping = false;
+                c.objA->rigidBody->sleepTimer = 0.f;
+            }
+            if (c.objB->rigidBody && c.objB->rigidBody->isSleeping) {
+                c.objB->rigidBody->isSleeping = false;
+                c.objB->rigidBody->sleepTimer = 0.f;
+            }
+        }
 
-    glm::vec3 relVel = velB - velA;
-    float velAlongNormal = glm::dot(relVel, normal);
+        // 4. Sequential impulse: solve velocity constraints (multiple iterations)
+        for (int i = 0; i < VELOCITY_ITERATIONS; i++) {
+            solveVelocityConstraints(contacts);
+        }
 
-    if (velAlongNormal > 0) return;
+        // 5. Integrate velocities -> update positions/rotations
+        integrateVelocities(objs, FIXED_DT);
 
-    float restitution = 0.5f;
-    float j = -(1.0f + restitution) * velAlongNormal;
-    j /= (invMassA + invMassB);
+        // 6. Solve position constraints (Baumgarte correction, multiple iterations)
+        for (int i = 0; i < POSITION_ITERATIONS; i++) {
+            solvePositionConstraints(contacts);
+        }
 
-    glm::vec3 impulse = j * normal;
+        // 7. Bullet collisions (separate pass — bullets are projectiles, not iterated)
+        detectBulletCollisions(bullets, objs);
 
-    if (rbA) rbA->velocity -= impulse * invMassA;
-    if (rbB) rbB->velocity += impulse * invMassB;
+        // 8. Sleep system
+        updateSleep(objs, FIXED_DT);
+
+        accumulator -= FIXED_DT;
+    }
 }
 
-void CollisionSystem::collisionResolve(MyGameObject &objA, MyGameObject &objB,
-                                       collisionManifold &collisionManifold) {
-    if (!collisionManifold.isColliding) return;
+void PhysicsWorld::integrateForces(MyGameObject::Map &objs, float dt) {
+    for (auto &[id, obj] : objs) {
+        if (!obj.rigidBody || obj.rigidBody->mass <= 0.f || obj.rigidBody->isSleeping) continue;
+        auto *rb = obj.rigidBody.get();
 
-    const int iteration = 4;
-    for (int i = 0; i < iteration; i++) { applyImpulse(objA, objB, collisionManifold); }
+        // Gravity (Y-down in this engine)
+        rb->velocity.y += GRAVITY * dt;
+
+        // Framerate-independent exponential damping
+        rb->velocity *= std::exp(-rb->linearDamping * dt);
+        rb->angularVelocity *= std::exp(-rb->angularDamping * dt);
+    }
 }
 
-void GravitySystem::update(MyGameObject::Map &objs, float dt) {
-    for (auto &kv : objs) {
-        auto &obj = kv.second;
-        if (obj.rigidBody == nullptr) continue;
+void PhysicsWorld::integrateVelocities(MyGameObject::Map &objs, float dt) {
+    for (auto &[id, obj] : objs) {
+        if (!obj.rigidBody || obj.rigidBody->mass <= 0.f || obj.rigidBody->isSleeping) continue;
+        auto *rb = obj.rigidBody.get();
 
-        const float GRAVITY = 9.8f;
-        if (obj.rigidBody->mass > 0.0f) {
-            obj.rigidBody->velocity.y += GRAVITY * dt;
-            obj.transform.translation += obj.rigidBody->velocity * dt;
+        // Velocity clamping to prevent tunneling
+        constexpr float MAX_VELOCITY = 30.f;
+        float speed = glm::length(rb->velocity);
+        if (speed > MAX_VELOCITY) {
+            rb->velocity = (rb->velocity / speed) * MAX_VELOCITY;
+        }
+
+        constexpr float MAX_ANGULAR_VELOCITY = 10.f;
+        float angSpeed = glm::length(rb->angularVelocity);
+        if (angSpeed > MAX_ANGULAR_VELOCITY) {
+            rb->angularVelocity = (rb->angularVelocity / angSpeed) * MAX_ANGULAR_VELOCITY;
+        }
+
+        // NaN safety
+        if (std::isnan(rb->velocity.x) || std::isnan(rb->velocity.y) || std::isnan(rb->velocity.z)) {
+            rb->velocity = glm::vec3(0.f);
+        }
+        if (std::isnan(rb->angularVelocity.x) || std::isnan(rb->angularVelocity.y) ||
+            std::isnan(rb->angularVelocity.z)) {
+            rb->angularVelocity = glm::vec3(0.f);
+        }
+
+        // Semi-implicit Euler integration
+        obj.transform.translation += rb->velocity * dt;
+        obj.transform.rotation += rb->angularVelocity * dt;
+    }
+}
+
+std::vector<ContactConstraint> PhysicsWorld::detectCollisions(MyGameObject::Map &objs) {
+    std::vector<ContactConstraint> contacts;
+
+    for (auto itA = objs.begin(); itA != objs.end(); ++itA) {
+        if (!itA->second.rigidBody) continue;
+
+        auto itB = itA;
+        ++itB;
+        for (; itB != objs.end(); ++itB) {
+            if (!itB->second.rigidBody) continue;
+
+            auto manifold = CollisionSystem::checkCollisionOBB(itA->second, itB->second);
+            if (manifold.isColliding && !manifold.contactPoints.empty()) {
+                ContactConstraint c{};
+                c.objA = &itA->second;
+                c.objB = &itB->second;
+                c.manifold = std::move(manifold);
+                contacts.push_back(std::move(c));
+            }
+        }
+    }
+
+    return contacts;
+}
+
+void PhysicsWorld::detectBulletCollisions(std::vector<std::unique_ptr<MyGameObject>> &bullets,
+                                          MyGameObject::Map &objs) {
+    for (auto &bullet : bullets) {
+        if (!bullet->bulletCom || !bullet->bulletCom->isActive) continue;
+
+        for (auto &[id, obj] : objs) {
+            if (!obj.rigidBody) continue;
+
+            auto manifold = CollisionSystem::checkCollisionOBB(*bullet, obj);
+            if (manifold.isColliding && !manifold.contactPoints.empty()) {
+                // Simple single-pass impulse for bullet impacts
+                auto *rbBullet = bullet->rigidBody.get();
+                auto *rbObj = obj.rigidBody.get();
+
+                float invMassBullet = rbBullet ? rbBullet->invMass() : 0.f;
+                float invMassObj = rbObj ? rbObj->invMass() : 0.f;
+
+                if (invMassBullet + invMassObj > 0.f) {
+                    glm::vec3 relVel = (rbObj ? rbObj->velocity : glm::vec3(0.f)) -
+                                       (rbBullet ? rbBullet->velocity : glm::vec3(0.f));
+                    float velAlongNormal = glm::dot(relVel, manifold.normal);
+
+                    if (velAlongNormal < 0.f) {
+                        float j = -(1.f + 0.0f) * velAlongNormal / (invMassBullet + invMassObj);
+                        glm::vec3 impulse = j * manifold.normal;
+
+                        if (rbObj && rbObj->mass > 0.f) {
+                            rbObj->velocity += impulse * invMassObj;
+
+                            // Wake up on bullet hit
+                            if (rbObj->isSleeping) {
+                                rbObj->isSleeping = false;
+                                rbObj->sleepTimer = 0.f;
+                            }
+
+                            // Apply angular impulse from bullet
+                            glm::vec3 cp = manifold.contactPoints[0];
+                            glm::vec3 r = cp - obj.transform.translation;
+                            glm::mat3 rot = obj.transform.normalMatrix();
+                            rot[0] = glm::normalize(rot[0]);
+                            rot[1] = glm::normalize(rot[1]);
+                            rot[2] = glm::normalize(rot[2]);
+                            glm::mat3 invI = rbObj->invInertiaWorld(rot);
+                            rbObj->angularVelocity += invI * glm::cross(r, impulse);
+                        }
+                    }
+                }
+
+                bullet->bulletCom->isActive = false;
+                break;
+            }
+        }
+    }
+}
+
+void PhysicsWorld::solveVelocityConstraints(std::vector<ContactConstraint> &contacts) {
+    for (auto &c : contacts) {
+        auto *rbA = c.objA->rigidBody.get();
+        auto *rbB = c.objB->rigidBody.get();
+
+        float invMassA = rbA ? rbA->invMass() : 0.f;
+        float invMassB = rbB ? rbB->invMass() : 0.f;
+        if (invMassA + invMassB == 0.f) continue;
+
+        // World-space inverse inertia tensors
+        glm::mat3 rotA = c.objA->transform.normalMatrix();
+        rotA[0] = glm::normalize(rotA[0]);
+        rotA[1] = glm::normalize(rotA[1]);
+        rotA[2] = glm::normalize(rotA[2]);
+        glm::mat3 rotB = c.objB->transform.normalMatrix();
+        rotB[0] = glm::normalize(rotB[0]);
+        rotB[1] = glm::normalize(rotB[1]);
+        rotB[2] = glm::normalize(rotB[2]);
+
+        glm::mat3 invIA = rbA ? rbA->invInertiaWorld(rotA) : glm::mat3(0.f);
+        glm::mat3 invIB = rbB ? rbB->invInertiaWorld(rotB) : glm::mat3(0.f);
+
+        // Combined material properties
+        float restitution = std::min(rbA ? rbA->restitution : 0.f, rbB ? rbB->restitution : 0.f);
+        float friction = std::sqrt((rbA ? rbA->friction : 0.6f) * (rbB ? rbB->friction : 0.6f));
+
+        glm::vec3 normal = c.manifold.normal;
+        size_t numContacts = std::min(c.manifold.contactPoints.size(), static_cast<size_t>(4));
+
+        for (size_t i = 0; i < numContacts; i++) {
+            glm::vec3 cp = c.manifold.contactPoints[i];
+            glm::vec3 rA = cp - c.objA->transform.translation;
+            glm::vec3 rB = cp - c.objB->transform.translation;
+
+            // Velocity at contact point
+            glm::vec3 velA = (rbA ? rbA->velocity : glm::vec3(0.f)) +
+                             glm::cross(rbA ? rbA->angularVelocity : glm::vec3(0.f), rA);
+            glm::vec3 velB = (rbB ? rbB->velocity : glm::vec3(0.f)) +
+                             glm::cross(rbB ? rbB->angularVelocity : glm::vec3(0.f), rB);
+            glm::vec3 relVel = velB - velA;
+
+            float velAlongNormal = glm::dot(relVel, normal);
+
+            // Box2D technique: kill restitution for low-speed contacts (prevents micro-bouncing)
+            float effectiveRestitution = (glm::abs(velAlongNormal) > 1.0f) ? restitution : 0.0f;
+
+            // ── Normal impulse ──
+            glm::vec3 rAxN = glm::cross(rA, normal);
+            glm::vec3 rBxN = glm::cross(rB, normal);
+            float kNormal = invMassA + invMassB +
+                            glm::dot(rAxN, invIA * rAxN) +
+                            glm::dot(rBxN, invIB * rBxN);
+
+            if (kNormal <= 0.f) continue;
+
+            float jn = -(1.f + effectiveRestitution) * velAlongNormal / kNormal;
+            jn /= static_cast<float>(numContacts);
+
+            // Accumulated impulse clamping (Box2D technique — prevents drift)
+            float oldAccum = c.normalImpulseAccum[i];
+            c.normalImpulseAccum[i] = std::max(oldAccum + jn, 0.f);
+            jn = c.normalImpulseAccum[i] - oldAccum;
+
+            glm::vec3 impulseN = jn * normal;
+
+            if (rbA) {
+                rbA->velocity -= impulseN * invMassA;
+                rbA->angularVelocity -= invIA * glm::cross(rA, impulseN);
+            }
+            if (rbB) {
+                rbB->velocity += impulseN * invMassB;
+                rbB->angularVelocity += invIB * glm::cross(rB, impulseN);
+            }
+
+            // ── Friction impulse ──
+            // Recompute velocity after normal impulse
+            velA = (rbA ? rbA->velocity : glm::vec3(0.f)) +
+                   glm::cross(rbA ? rbA->angularVelocity : glm::vec3(0.f), rA);
+            velB = (rbB ? rbB->velocity : glm::vec3(0.f)) +
+                   glm::cross(rbB ? rbB->angularVelocity : glm::vec3(0.f), rB);
+            relVel = velB - velA;
+
+            glm::vec3 tangentVel = relVel - glm::dot(relVel, normal) * normal;
+            float tangentSpeed = glm::length(tangentVel);
+            if (tangentSpeed < 1e-6f) continue;
+
+            glm::vec3 tangent = tangentVel / tangentSpeed;
+
+            glm::vec3 rAxT = glm::cross(rA, tangent);
+            glm::vec3 rBxT = glm::cross(rB, tangent);
+            float kTangent = invMassA + invMassB +
+                             glm::dot(rAxT, invIA * rAxT) +
+                             glm::dot(rBxT, invIB * rBxT);
+
+            if (kTangent <= 0.f) continue;
+
+            float jt = -glm::dot(relVel, tangent) / kTangent;
+            jt /= static_cast<float>(numContacts);
+
+            // Coulomb friction cone clamp
+            float maxFriction = friction * c.normalImpulseAccum[i];
+            jt = glm::clamp(jt, -maxFriction, maxFriction);
+
+            glm::vec3 impulseT = jt * tangent;
+
+            if (rbA) {
+                rbA->velocity -= impulseT * invMassA;
+                rbA->angularVelocity -= invIA * glm::cross(rA, impulseT);
+            }
+            if (rbB) {
+                rbB->velocity += impulseT * invMassB;
+                rbB->angularVelocity += invIB * glm::cross(rB, impulseT);
+            }
+
+            // ── Rolling friction ──
+            // Damp angular velocity proportional to normal impulse (simulates rolling resistance)
+            constexpr float ROLLING_FRICTION = 0.1f;
+            float rollingResist = ROLLING_FRICTION * c.normalImpulseAccum[i] /
+                                  static_cast<float>(numContacts);
+
+            if (rbA && rbA->mass > 0.f) {
+                float angSpeedA = glm::length(rbA->angularVelocity);
+                if (angSpeedA > 1e-6f) {
+                    float reductionA = std::min(rollingResist * invMassA, angSpeedA);
+                    rbA->angularVelocity -= (rbA->angularVelocity / angSpeedA) * reductionA;
+                }
+            }
+            if (rbB && rbB->mass > 0.f) {
+                float angSpeedB = glm::length(rbB->angularVelocity);
+                if (angSpeedB > 1e-6f) {
+                    float reductionB = std::min(rollingResist * invMassB, angSpeedB);
+                    rbB->angularVelocity -= (rbB->angularVelocity / angSpeedB) * reductionB;
+                }
+            }
+        }
+    }
+}
+
+void PhysicsWorld::solvePositionConstraints(std::vector<ContactConstraint> &contacts) {
+    constexpr float BAUMGARTE = 0.2f;
+    constexpr float SLOP = 0.005f;
+
+    for (auto &c : contacts) {
+        auto *rbA = c.objA->rigidBody.get();
+        auto *rbB = c.objB->rigidBody.get();
+
+        float invMassA = rbA ? rbA->invMass() : 0.f;
+        float invMassB = rbB ? rbB->invMass() : 0.f;
+        float totalInvMass = invMassA + invMassB;
+        if (totalInvMass == 0.f) continue;
+
+        float penetration = c.manifold.depth;
+        float correction = std::max(penetration - SLOP, 0.f) * BAUMGARTE / totalInvMass;
+
+        glm::vec3 corrVec = correction * c.manifold.normal;
+
+        if (rbA && rbA->mass > 0.f)
+            c.objA->transform.translation -= invMassA * corrVec;
+        if (rbB && rbB->mass > 0.f)
+            c.objB->transform.translation += invMassB * corrVec;
+    }
+}
+
+void PhysicsWorld::updateSleep(MyGameObject::Map &objs, float dt) {
+    constexpr float SLEEP_LINEAR_THRESHOLD = 0.1f;
+    constexpr float SLEEP_ANGULAR_THRESHOLD = 0.1f;
+    constexpr float SLEEP_TIME = 0.5f;
+
+    for (auto &[id, obj] : objs) {
+        if (!obj.rigidBody || obj.rigidBody->mass <= 0.f) continue;
+        auto *rb = obj.rigidBody.get();
+        if (rb->isSleeping) continue;
+
+        float linSpeed = glm::length(rb->velocity);
+        float angSpeed = glm::length(rb->angularVelocity);
+
+        if (linSpeed < SLEEP_LINEAR_THRESHOLD && angSpeed < SLEEP_ANGULAR_THRESHOLD) {
+            rb->sleepTimer += dt;
+            if (rb->sleepTimer >= SLEEP_TIME) {
+                rb->isSleeping = true;
+                rb->velocity = glm::vec3(0.f);
+                rb->angularVelocity = glm::vec3(0.f);
+            }
+        } else {
+            rb->sleepTimer = 0.f;
         }
     }
 }

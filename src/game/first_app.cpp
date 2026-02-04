@@ -64,11 +64,12 @@ void FirstApp::run() {
     // TODO : init an id in the main player file
     auto playerObject = MyGameObject::createGameObject();
     playerObject.rigidBody = std::make_unique<RigidBodyComponent>();
+    playerObject.rigidBody->friction = 0.2f;
     playerObject.transform.translation = glm::vec3(1.f, -10.f, 1.f);
     MyPlayer mainPlayer{camera, playerObject.getId()};
     gameObjects.emplace(playerObject.getId(), std::move(playerObject));
 
-    long long health = 10000;
+    PhysicsWorld physicsWorld;
     auto currentTime = std::chrono::high_resolution_clock::now();
 
     while (!window.shouldClose()) {
@@ -79,10 +80,22 @@ void FirstApp::run() {
             std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
         currentTime = newTime;
 
-        // may add smallest time frame to prevent frame skipping
+        frameTime = std::min(frameTime, 0.05f);
 
+        // Update player input and bullet lifetimes
         mainPlayer.update(window.getWindow(), frameTime, gameObjects, bulletHandler);
         bulletHandler.update(frameTime);
+
+        // Physics: fixed timestep, iterative solver, collision detection + resolution
+        physicsWorld.step(gameObjects, bulletHandler.getBullets(), frameTime);
+
+        if (glfwGetKey(window.getWindow(), GLFW_KEY_F) == GLFW_PRESS) {
+            for (auto &kv : gameObjects) {
+                if (kv.second.rigidBody && kv.second.rigidBody->mass == 2.0f) {
+                    kv.second.rigidBody->velocity.x = -5.0f;
+                }
+            }
+        }
 
         float aspect = myRenderer.getAspectRatio();
         // camera.setOrthographicProjection(-aspect, aspect, -1, 1, -1, 1);
@@ -93,7 +106,7 @@ void FirstApp::run() {
             FrameInfo frameInfo{frameIndex, frameTime, commandBuffer, camera, globalDescriptorSet[frameIndex],
                                 gameObjects};
 
-            // line below to update
+            // line below to update descriptorInfo
             GlobalUbo ubo{};
             ubo.projection = camera.getProjectionMatrix();
             ubo.view = camera.getView();
@@ -104,29 +117,6 @@ void FirstApp::run() {
             // line below to render
             myRenderer.beginSwapChainRenderPass(commandBuffer);
             simpleRenderSystem.renderGameObjects(frameInfo);
-
-            GravitySystem::update(gameObjects, frameTime);
-
-            // Physics Update Loop
-            for (auto &objA : gameObjects) {
-                for (auto &objB : gameObjects) {
-                    if (objA.first == objB.first) continue;
-                    if (objA.second.rigidBody == nullptr && objB.second.rigidBody == nullptr) continue;
-
-                    auto manifold = CollisionSystem::checkCollisionOBB(objA.second, objB.second);
-                    if (manifold.isColliding) {
-                        CollisionSystem::collisionResolve(objA.second, objB.second, manifold);
-                    }
-                }
-            }
-
-            if (glfwGetKey(window.getWindow(), GLFW_KEY_F) == GLFW_PRESS) {
-                for (auto &kv : gameObjects) {
-                    if (kv.second.rigidBody && kv.second.rigidBody->mass == 1.0f) {
-                        kv.second.rigidBody->velocity += glm::vec3(0.f, -5.f, 0.f) * frameTime;
-                    }
-                }
-            }
 
             bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getPipelineLayout());
             PointLightSystem.renderLight(frameInfo);
@@ -141,32 +131,45 @@ void FirstApp::run() {
 void FirstApp::loadGameObjects() {
     std::shared_ptr<MyModel> cubeModel = MyModel::createModelFromFile(device, "models/colored_cube.obj");
 
-    // Floor
     auto floor = MyGameObject::createGameObject();
     floor.model = cubeModel;
     floor.transform.translation = {0.f, 0.5f, 0.f};
     floor.transform.scale = {10.f, 0.2f, 10.f};
     floor.rigidBody = std::make_unique<RigidBodyComponent>();
-    floor.rigidBody->mass = 0.0f; // Infinite mass
+    floor.rigidBody->mass = 0.0f;
+    floor.rigidBody->restitution = 0.1f;
+    floor.rigidBody->computeBoxInertia(floor.transform.scale * 0.5f);
     gameObjects.emplace(floor.getId(), std::move(floor));
 
-    // Dynamic Cube 1
     auto cube1 = MyGameObject::createGameObject();
     cube1.model = cubeModel;
     cube1.transform.translation = {-0.5f, -3.f, 0.f};
     cube1.transform.scale = {0.5f, 0.5f, 0.5f};
     cube1.rigidBody = std::make_unique<RigidBodyComponent>();
     cube1.rigidBody->mass = 1.0f;
+    cube1.rigidBody->restitution = 0.1f;
+    cube1.rigidBody->computeBoxInertia(cube1.transform.scale * 0.5f);
     gameObjects.emplace(cube1.getId(), std::move(cube1));
 
-    // Dynamic Cube 2
     auto cube2 = MyGameObject::createGameObject();
     cube2.model = cubeModel;
-    cube2.transform.translation = {0.5f, -5.f, 0.f}; // Higher up
+    cube2.transform.translation = {0.5f, -5.f, 0.f};
     cube2.transform.scale = {0.5f, 0.5f, 0.5f};
     cube2.rigidBody = std::make_unique<RigidBodyComponent>();
-    cube2.rigidBody->mass = 2.0f; // Heavier
+    cube2.rigidBody->mass = 2.0f;
+    cube2.rigidBody->restitution = 0.1f;
+    cube2.rigidBody->computeBoxInertia(cube2.transform.scale * 0.5f);
     gameObjects.emplace(cube2.getId(), std::move(cube2));
+
+    auto cube3 = MyGameObject::createGameObject();
+    cube3.model = cubeModel;
+    cube3.transform.translation = {0.5f, -15.f, 0.f};
+    cube3.transform.scale = {0.5f, 0.5f, 0.5f};
+    cube3.rigidBody = std::make_unique<RigidBodyComponent>();
+    cube3.rigidBody->mass = 2.0f;
+    cube3.rigidBody->restitution = 0.1f;
+    cube3.rigidBody->computeBoxInertia(cube3.transform.scale * 0.5f);
+    gameObjects.emplace(cube3.getId(), std::move(cube3));
 
     std::vector<glm::vec3> lightColors{{1.f, .1f, .1f}, {.1f, .1f, 1.f}, {.1f, 1.f, .1f},
                                        {1.f, 1.f, .1f}, {.1f, 1.f, 1.f}, {1.f, 1.f, 1.f}};

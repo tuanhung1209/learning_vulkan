@@ -28,7 +28,45 @@ struct BulletComponent {
 
 struct RigidBodyComponent {
     glm::vec3 velocity{};
-    float mass{1.0f};
+    glm::vec3 angularVelocity{};
+    float mass{1.0f};            // 0 = static/immovable
+    float restitution{0.2f};     // Bounciness (material property)
+    float friction{0.6f};        // Friction coefficient
+    float linearDamping{0.5f};   // Per-second linear damping factor
+    float angularDamping{2.0f};  // Per-second angular damping factor
+
+    // Inverse inertia tensor diagonal (local space, for boxes)
+    glm::vec3 invInertiaDiag{0.f};
+
+    bool isSleeping{false};
+    float sleepTimer{0.0f};
+
+    float invMass() const { return mass > 0.f ? 1.f / mass : 0.f; }
+
+    // Transform local inverse inertia to world space via rotation matrix
+    glm::mat3 invInertiaWorld(const glm::mat3 &rot) const {
+        if (mass <= 0.f) return glm::mat3(0.f);
+        glm::mat3 localInvI(0.f);
+        localInvI[0][0] = invInertiaDiag.x;
+        localInvI[1][1] = invInertiaDiag.y;
+        localInvI[2][2] = invInertiaDiag.z;
+        return rot * localInvI * glm::transpose(rot);
+    }
+
+    // Compute inverse inertia for a box given its half-extents (scale * 0.5)
+    void computeBoxInertia(const glm::vec3 &halfExtents) {
+        if (mass <= 0.f) {
+            invInertiaDiag = glm::vec3(0.f);
+            return;
+        }
+        float x2 = 4.f * halfExtents.x * halfExtents.x;
+        float y2 = 4.f * halfExtents.y * halfExtents.y;
+        float z2 = 4.f * halfExtents.z * halfExtents.z;
+        float factor = mass / 12.f;
+        invInertiaDiag.x = 1.f / (factor * (y2 + z2));
+        invInertiaDiag.y = 1.f / (factor * (x2 + z2));
+        invInertiaDiag.z = 1.f / (factor * (x2 + y2));
+    }
 };
 
 class MyGameObject {
