@@ -4,15 +4,15 @@
  * Initially based off VulkanBuffer by Sascha Willems -
  * https://github.com/SaschaWillems/Vulkan/blob/master/base/VulkanBuffer.h
  */
- 
+
 #include "vulkan_core/my_buffer.hpp"
- 
+
 // std
 #include <cassert>
 #include <cstring>
- 
-namespace my{
- 
+
+namespace my {
+
 /**
  * Returns the minimum instance size required to be compatible with devices minOffsetAlignment
  *
@@ -23,35 +23,28 @@ namespace my{
  * @return VkResult of the buffer mapping call
  */
 VkDeviceSize MyBuffer::getAlignment(VkDeviceSize instanceSize, VkDeviceSize minOffsetAlignment) {
-    if (minOffsetAlignment > 0){
+    if (minOffsetAlignment > 0) {
         return (instanceSize + minOffsetAlignment - 1) & ~(minOffsetAlignment - 1);
     }
-  return instanceSize;
+    return instanceSize;
 }
- 
-MyBuffer::MyBuffer(
-    Device &device,
-    VkDeviceSize instanceSize,
-    uint32_t instanceCount,
-    VkBufferUsageFlags usageFlags,
-    VkMemoryPropertyFlags memoryPropertyFlags,
-    VkDeviceSize minOffsetAlignment)
-    : myDevice{device},
-      instanceSize{instanceSize},
-      instanceCount{instanceCount},
-      usageFlags{usageFlags},
+
+MyBuffer::MyBuffer(Device &device, VkDeviceSize instanceSize, uint32_t instanceCount,
+                   VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryPropertyFlags,
+                   VkDeviceSize minOffsetAlignment)
+    : myDevice{device}, instanceSize{instanceSize}, instanceCount{instanceCount}, usageFlags{usageFlags},
       memoryPropertyFlags{memoryPropertyFlags} {
-  alignmentSize = getAlignment(instanceSize, minOffsetAlignment);
-  bufferSize = alignmentSize * instanceCount;
-  device.createBuffer(bufferSize, usageFlags, memoryPropertyFlags, buffer, memory);
+    alignmentSize = getAlignment(instanceSize, minOffsetAlignment);
+    bufferSize = alignmentSize * instanceCount;
+    device.createBuffer(bufferSize, usageFlags, memoryPropertyFlags, buffer, memory);
 }
- 
+
 MyBuffer::~MyBuffer() {
     unmap();
     vkDestroyBuffer(myDevice.device(), buffer, nullptr);
     vkFreeMemory(myDevice.device(), memory, nullptr);
 }
- 
+
 /**
  * Map a memory range of this buffer. If successful, mapped points to the specified buffer range.
  *
@@ -62,17 +55,17 @@ MyBuffer::~MyBuffer() {
  * @return VkResult of the buffer mapping call
  */
 VkResult MyBuffer::map(VkDeviceSize size, VkDeviceSize offset) {
-  assert(buffer && memory && "Called map on buffer before create");
-  return vkMapMemory(myDevice.device(), memory, offset, size, 0, &mapped);
+    assert(buffer && memory && "Called map on buffer before create");
+    return vkMapMemory(myDevice.device(), memory, offset, size, 0, &mapped);
 }
- 
+
 /**
  * Unmap a mapped memory range
  *
  * @note Does not return a result as vkUnmapMemory can't fail
  */
-void MyBuffer::unmap(){
-    if (mapped){
+void MyBuffer::unmap() {
+    if (mapped) {
         vkUnmapMemory(myDevice.device(), memory);
         mapped = nullptr;
     }
@@ -86,15 +79,15 @@ void MyBuffer::unmap(){
 void MyBuffer::writeToBuffer(void *data, VkDeviceSize size, VkDeviceSize offset) {
     assert(mapped && "Cannot copy to unmapped buffer");
 
-    if (size == VK_WHOLE_SIZE){
+    if (size == VK_WHOLE_SIZE) {
         memcpy(mapped, data, bufferSize);
     } else {
-    char *memOffset = (char *)mapped;
-    memOffset += offset;
-    memcpy(memOffset, data, size);
-  }
+        char *memOffset = (char *)mapped;
+        memOffset += offset;
+        memcpy(memOffset, data, size);
+    }
 }
- 
+
 /**
  * Flush a memory range of the buffer to make it visible to the device
  *
@@ -114,7 +107,7 @@ VkResult MyBuffer::flush(VkDeviceSize size, VkDeviceSize offset) {
     mappedRange.size = size;
     return vkFlushMappedMemoryRanges(myDevice.device(), 1, &mappedRange);
 }
- 
+
 /**
  * Invalidate a memory range of the buffer to make it visible to the host
  *
@@ -134,7 +127,7 @@ VkResult MyBuffer::invalidate(VkDeviceSize size, VkDeviceSize offset) {
     mappedRange.size = size;
     return vkInvalidateMappedMemoryRanges(myDevice.device(), 1, &mappedRange);
 }
- 
+
 /**
  * Create a buffer info descriptor
  *
@@ -150,7 +143,7 @@ VkDescriptorBufferInfo MyBuffer::descriptorInfo(VkDeviceSize size, VkDeviceSize 
         size,
     };
 }
- 
+
 /**
  * Copies "instanceSize" bytes of data to the mapped buffer at an offset of index * alignmentSize
  *
@@ -161,7 +154,7 @@ VkDescriptorBufferInfo MyBuffer::descriptorInfo(VkDeviceSize size, VkDeviceSize 
 void MyBuffer::writeToIndex(void *data, int index) {
     writeToBuffer(data, instanceSize, index * alignmentSize);
 }
- 
+
 /**
  *  Flush the memory range at index * alignmentSize of the buffer to make it visible to the device
  *
@@ -169,7 +162,7 @@ void MyBuffer::writeToIndex(void *data, int index) {
  *
  */
 VkResult MyBuffer::flushIndex(int index) { return flush(alignmentSize, index * alignmentSize); }
- 
+
 /**
  * Create a buffer info descriptor
  *
@@ -180,7 +173,7 @@ VkResult MyBuffer::flushIndex(int index) { return flush(alignmentSize, index * a
 VkDescriptorBufferInfo MyBuffer::descriptorInfoForIndex(int index) {
     return descriptorInfo(alignmentSize, index * alignmentSize);
 }
- 
+
 /**
  * Invalidate a memory range of the buffer to make it visible to the host
  *
@@ -190,9 +183,7 @@ VkDescriptorBufferInfo MyBuffer::descriptorInfoForIndex(int index) {
  *
  * @return VkResult of the invalidate call
  */
-VkResult MyBuffer::invalidateIndex(int index) {
-    return invalidate(alignmentSize, index * alignmentSize);
-}
- 
-}  // namespace lve
- 
+VkResult MyBuffer::invalidateIndex(int index) { return invalidate(alignmentSize, index * alignmentSize); }
+
+} // namespace my
+

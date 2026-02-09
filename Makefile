@@ -1,6 +1,6 @@
 include .env
 
-CFLAGS = -std=c++17 -O2 -I$(TINYOBJ_PATH) -I. -Isrc
+CFLAGS = -std=c++17 -O2 -I$(TINYOBJ_PATH) -I$(STB_IMAGE_PATH) -I. -Isrc
 LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
 
 # create list of all spv files and set as dependency
