@@ -14,6 +14,8 @@ class MyTexture {
 
   private:
     void createTextureImage(FrameInfo &frameInfo);
+    void transitionImageLayout(VkImage &image, VkFormat format, VkImageLayout oldLayout,
+                               VkImageLayout newLayout);
 
     Device &myDevice;
 
