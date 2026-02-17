@@ -2,6 +2,7 @@
 #include "game/keyboard_movement_controller.hpp"
 #include "game/my_Player.hpp"
 #include "game/physics_utils.hpp"
+#include "render_core/my_texture.hpp"
 #include "render_systems/point_light_system.hpp"
 #include "render_systems/simple_render_system.hpp"
 #include "vulkan_core/my_buffer.hpp"
@@ -21,14 +22,17 @@ FirstApp::FirstApp() {
     globalPool = MyDescriptorPool::Builder(device)
                      .setMaxSets(SwapChain::MAX_FRAMES_IN_FLIGHT)
                      .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SwapChain::MAX_FRAMES_IN_FLIGHT)
+                     .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, SwapChain::MAX_FRAMES_IN_FLIGHT)
                      .build();
     loadGameObjects();
+    // loadTextureImage();
 }
 
 FirstApp::~FirstApp() {}
 
 void FirstApp::run() {
     std::vector<std::unique_ptr<MyBuffer>> uboBuffers(SwapChain::MAX_FRAMES_IN_FLIGHT);
+
     for (int i = 0; i < uboBuffers.size(); i++) {
         uboBuffers[i] =
             std::make_unique<MyBuffer>(device, sizeof(GlobalUbo), 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -36,15 +40,27 @@ void FirstApp::run() {
         uboBuffers[i]->map();
     }
 
-    auto globalSetLayout = MyDescriptorSetLayout::Builder(device)
-                               .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
-                               .build();
+    auto globalSetLayout =
+        MyDescriptorSetLayout::Builder(device)
+            .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+            .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .build();
+
+    // may add thing like map like gameobjects
+    auto testTexture = std::make_shared<MyTexture>(device, "textures/test1.png");
 
     std::vector<VkDescriptorSet> globalDescriptorSet(SwapChain::MAX_FRAMES_IN_FLIGHT);
     for (int i = 0; i < globalDescriptorSet.size(); i++) {
         auto bufferInfo = uboBuffers[i]->descriptorInfo();
+
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.sampler = testTexture->getTextureSampler();
+        imageInfo.imageView = testTexture->getTextureImageView();
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
         MyDescriptorWriter(*globalSetLayout, *globalPool)
             .writeBuffer(0, &bufferInfo)
+            .writeImage(1, &imageInfo)
             .build(globalDescriptorSet[i]);
     }
 

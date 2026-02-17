@@ -1,24 +1,32 @@
 #include "my_texture.hpp"
-#include "render_core/my_frame_info.hpp"
 #include "vulkan_core/my_buffer.hpp"
 #include <cassert>
 #include <stdexcept>
+#include <string>
 
 #define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 namespace my {
 
 // make this an textureInstance so can have multiple image
-MyTexture::MyTexture(Device &device) : myDevice{device} {};
+MyTexture::MyTexture(Device &device, const std::string filepath) : myDevice{device} {
+    createTextureImage(filepath);
+    createTextureImageView();
+    createTextureSampler();
+};
 
 MyTexture::~MyTexture() {
     vkDestroyImage(myDevice.device(), textureImage, nullptr);
+    vkDestroySampler(myDevice.device(), textureSampler, nullptr);
+    vkDestroyImageView(myDevice.device(), textureImageView, nullptr);
     vkFreeMemory(myDevice.device(), textureImageMemory, nullptr);
 };
 
-void MyTexture::createTextureImage(FrameInfo &frameInfo) {
+void MyTexture::createTextureImage(const std::string filePath) {
     int texWidth, texHeight, texChannels;
-    stbi_uc *pixels = stbi_load("textures/test1.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    // change this to file path so can load later
+    stbi_uc *pixels = stbi_load(filePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
     assert(pixels && "cannot load pixel image");
 
@@ -48,54 +56,46 @@ void MyTexture::createTextureImage(FrameInfo &frameInfo) {
     myDevice.createImageWithInfo(imageInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage,
                                  textureImageMemory);
 
-    transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    myDevice.transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     myDevice.copyBufferToImage(stagingBuffer.getBuffer(), textureImage, static_cast<uint32_t>(texWidth),
                                static_cast<uint32_t>(texHeight), 1);
-    transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    myDevice.transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB,
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-// this is currently only support normalish layout transition for picture
-void MyTexture::transitionImageLayout(VkImage &image, VkFormat format, VkImageLayout oldLayout,
-                                      VkImageLayout newLayout) {
-    VkCommandBuffer commandBuffer = myDevice.beginSingleTimeCommands();
+void MyTexture::createTextureImageView() {
+    textureImageView = myDevice.createImageViewWithInfo(textureImage, VK_FORMAT_R8G8B8A8_SRGB);
+}
 
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+void MyTexture::createTextureSampler() {
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
 
-    VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
 
-    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 
-        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.maxAnisotropy = myDevice.properties.limits.maxSamplerAnisotropy;
 
-    } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-               newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
-        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 
-    } else {
-        throw std::runtime_error("unsupported layout transition!");
+    if (vkCreateSampler(myDevice.device(), &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+        throw std::runtime_error("can create texture image sampler");
     }
-
-    vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1,
-                         &barrier);
-
-    myDevice.endSingleTimeCommands(commandBuffer);
 }
 
 } // namespace my

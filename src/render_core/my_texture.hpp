@@ -1,26 +1,30 @@
 #pragma once
 
-#include "render_core/my_frame_info.hpp"
 #include "vulkan_core/device.hpp"
-#include <stb_image.h>
+#include <string>
 #include <vulkan/vulkan_core.h>
 
 namespace my {
 
 class MyTexture {
   public:
-    MyTexture(Device &myDevice);
+    MyTexture(Device &myDevice, const std::string filePath);
     ~MyTexture();
 
+    VkImageView getTextureImageView() { return textureImageView; }
+    VkSampler getTextureSampler() { return textureSampler; }
+
   private:
-    void createTextureImage(FrameInfo &frameInfo);
-    void transitionImageLayout(VkImage &image, VkFormat format, VkImageLayout oldLayout,
-                               VkImageLayout newLayout);
+    void createTextureImage(const std::string filePath);
+    void createTextureImageView();
+    void createTextureSampler();
 
     Device &myDevice;
 
     VkImage textureImage = nullptr;
     VkDeviceMemory textureImageMemory = nullptr;
+    VkImageView textureImageView = nullptr;
+    VkSampler textureSampler = nullptr;
 };
 
 } // namespace my

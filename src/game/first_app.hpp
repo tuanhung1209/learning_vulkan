@@ -31,7 +31,7 @@ class FirstApp {
     Window window{WIDTH, HEIGHT, "cpp is hard"};
     Device device{window};
     MyRenderer myRenderer{window, device};
-    // currently using mailbox not vsync(fifo) will change if run into error
+    // may change back to mail box but vsync is power saving ?
 
     std::unique_ptr<MyDescriptorPool> globalPool;
     MyGameObject::Map gameObjects;

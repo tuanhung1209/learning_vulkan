@@ -3,6 +3,7 @@
 layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec3 fragPosWorld;
 layout(location = 2) in vec3 fragNormalWorld;
+layout(location = 3) in vec2 fragTexCoord;
 
 layout(location = 0) out vec4 outColor;
 
@@ -19,6 +20,8 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     int numLights;
 } ubo;
 
+layout(set = 0, binding = 1) uniform sampler2D texSampler;
+
 layout(push_constant) uniform Push{
     mat4 modelMatrix;
     mat4 normalMatrix;
@@ -29,13 +32,18 @@ void main() {
     vec3 suffaceNormal = normalize(fragNormalWorld);
 
     for (int i = 0; i < ubo.numLights; i++) {
-        PointLight light = ubo.pointlights[i]; 
+        PointLight light = ubo.pointlights[i];
         vec3 directionToLight = light.position.xyz - fragPosWorld;
         float attenuation = 1.0 / dot(directionToLight, directionToLight);
         float cosAngIncidence = max(dot(suffaceNormal, normalize(directionToLight)), 0);
         vec3 intensity = light.color.xyz * light.color.w * attenuation;
 
-        diffuseLight += intensity * cosAngIncidence; 
+        diffuseLight += intensity * cosAngIncidence;
     }
-    outColor = vec4(diffuseLight * fragColor, 1.0);
+
+    // Sample the texture using UV coordinates
+    vec3 texColor = texture(texSampler, fragTexCoord).rgb;
+
+    // Multiply texture color with lighting (replaces fragColor with texture)
+    outColor = vec4(diffuseLight * texColor, 1.0);
 }

@@ -10,12 +10,12 @@
 #include <memory>
 #include <vector>
 
-namespace my{
+namespace my {
 
-//copy vertex data from the cpu and transfer it to the gpu
-class MyModel{
-public:
-    struct Vertex{
+// copy vertex data from the cpu and transfer it to the gpu
+class MyModel {
+  public:
+    struct Vertex {
         glm::vec3 position;
         glm::vec3 color;
         glm::vec3 normal{};
@@ -25,22 +25,23 @@ public:
         static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 
         bool operator==(const Vertex &other) const {
-            return position == other.position && color == other.color && normal == other.normal && uv == other.uv;
+            return position == other.position && color == other.color && normal == other.normal &&
+                   uv == other.uv;
         }
     };
 
-    struct AABB{
+    struct AABB {
         glm::vec3 min{std::numeric_limits<float>::max()};
         glm::vec3 max{std::numeric_limits<float>::lowest()};
     };
 
-    struct Builder{
+    struct Builder {
         std::vector<Vertex> vertices{};
         std::vector<uint32_t> indicies{};
 
         void loadModel(const std::string &filepath);
     };
-    
+
     MyModel(Device &device, const MyModel::Builder &builder);
     ~MyModel();
 
@@ -48,18 +49,18 @@ public:
     MyModel(const MyModel &) = delete;
     MyModel &operator=(const MyModel &) = delete;
 
-    AABB getBound() const {return bound;}
+    AABB getBound() const { return bound; }
 
     static std::unique_ptr<MyModel> createModelFromFile(Device &device, const std::string filepath);
 
     void bind(VkCommandBuffer commandBuffer);
     void draw(VkCommandBuffer commandBuffer);
-private:
 
+  private:
     void createVertexBuffers(const std::vector<Vertex> &vertices);
     void createIndexBuffers(const std::vector<uint32_t> &indicies);
 
-    Device& myDevice;
+    Device &myDevice;
 
     AABB bound;
 
@@ -71,4 +72,4 @@ private:
     uint32_t indexCount;
 };
 
-}
+} // namespace my
