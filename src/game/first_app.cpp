@@ -22,10 +22,8 @@ FirstApp::FirstApp() {
     globalPool = MyDescriptorPool::Builder(device)
                      .setMaxSets(SwapChain::MAX_FRAMES_IN_FLIGHT)
                      .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SwapChain::MAX_FRAMES_IN_FLIGHT)
-                     .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, SwapChain::MAX_FRAMES_IN_FLIGHT)
                      .build();
     loadGameObjects();
-    // loadTextureImage();
 }
 
 FirstApp::~FirstApp() {}
@@ -40,27 +38,15 @@ void FirstApp::run() {
         uboBuffers[i]->map();
     }
 
-    auto globalSetLayout =
-        MyDescriptorSetLayout::Builder(device)
-            .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
-            .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .build();
-
-    // may add thing like map like gameobjects
-    auto testTexture = std::make_shared<MyTexture>(device, "textures/test1.png");
+    auto globalSetLayout = MyDescriptorSetLayout::Builder(device)
+                               .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+                               .build();
 
     std::vector<VkDescriptorSet> globalDescriptorSet(SwapChain::MAX_FRAMES_IN_FLIGHT);
     for (int i = 0; i < globalDescriptorSet.size(); i++) {
         auto bufferInfo = uboBuffers[i]->descriptorInfo();
-
-        VkDescriptorImageInfo imageInfo{};
-        imageInfo.sampler = testTexture->getTextureSampler();
-        imageInfo.imageView = testTexture->getTextureImageView();
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
         MyDescriptorWriter(*globalSetLayout, *globalPool)
             .writeBuffer(0, &bufferInfo)
-            .writeImage(1, &imageInfo)
             .build(globalDescriptorSet[i]);
     }
 
@@ -145,7 +131,20 @@ void FirstApp::run() {
 }
 
 void FirstApp::loadGameObjects() {
+
+    auto testTexture1 = std::make_shared<MyTexture>(device, "textures/test1.png");
+    auto testTexture2 = std::make_shared<MyTexture>(device, "textures/test2.png");
+
     std::shared_ptr<MyModel> cubeModel = MyModel::createModelFromFile(device, "models/colored_cube.obj");
+    std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(device, "models/quad.obj");
+
+    auto perlinViewer = MyGameObject::createGameObject();
+    perlinViewer.model = quadModel;
+    perlinViewer.texture = testTexture2;
+    perlinViewer.transform.translation = {4.f, -2.f, 1.f};
+    perlinViewer.transform.scale = {2.f, 2.f, 2.f};
+    perlinViewer.transform.rotation = {0.0f, glm::quarter_pi<float>(), glm::half_pi<float>()};
+    gameObjects.emplace(perlinViewer.getId(), std::move(perlinViewer));
 
     auto floor = MyGameObject::createGameObject();
     floor.model = cubeModel;
@@ -155,6 +154,7 @@ void FirstApp::loadGameObjects() {
     floor.rigidBody->mass = 0.0f;
     floor.rigidBody->restitution = 0.1f;
     floor.rigidBody->computeBoxInertia(floor.transform.scale * 0.5f);
+    floor.texture = testTexture1;
     gameObjects.emplace(floor.getId(), std::move(floor));
 
     auto cube1 = MyGameObject::createGameObject();
@@ -169,23 +169,13 @@ void FirstApp::loadGameObjects() {
 
     auto cube2 = MyGameObject::createGameObject();
     cube2.model = cubeModel;
-    cube2.transform.translation = {0.5f, -5.f, 0.f};
+    cube2.transform.translation = {0.5f, -15.f, 0.f};
     cube2.transform.scale = {0.5f, 0.5f, 0.5f};
     cube2.rigidBody = std::make_unique<RigidBodyComponent>();
     cube2.rigidBody->mass = 2.0f;
     cube2.rigidBody->restitution = 0.1f;
     cube2.rigidBody->computeBoxInertia(cube2.transform.scale * 0.5f);
     gameObjects.emplace(cube2.getId(), std::move(cube2));
-
-    auto cube3 = MyGameObject::createGameObject();
-    cube3.model = cubeModel;
-    cube3.transform.translation = {0.5f, -15.f, 0.f};
-    cube3.transform.scale = {0.5f, 0.5f, 0.5f};
-    cube3.rigidBody = std::make_unique<RigidBodyComponent>();
-    cube3.rigidBody->mass = 2.0f;
-    cube3.rigidBody->restitution = 0.1f;
-    cube3.rigidBody->computeBoxInertia(cube3.transform.scale * 0.5f);
-    gameObjects.emplace(cube3.getId(), std::move(cube3));
 
     std::vector<glm::vec3> lightColors{{1.f, .1f, .1f}, {.1f, .1f, 1.f}, {.1f, 1.f, .1f},
                                        {1.f, 1.f, .1f}, {.1f, 1.f, 1.f}, {1.f, 1.f, 1.f}};

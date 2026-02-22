@@ -1,6 +1,7 @@
 #pragma once
 
 #include "render_core/my_model.hpp"
+#include "render_core/my_texture.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <memory>
@@ -29,11 +30,11 @@ struct BulletComponent {
 struct RigidBodyComponent {
     glm::vec3 velocity{};
     glm::vec3 angularVelocity{};
-    float mass{1.0f};            // 0 = static/immovable
-    float restitution{0.2f};     // Bounciness (material property)
-    float friction{0.6f};        // Friction coefficient
-    float linearDamping{0.5f};   // Per-second linear damping factor
-    float angularDamping{2.0f};  // Per-second angular damping factor
+    float mass{1.0f};           // 0 = static/immovable
+    float restitution{0.2f};    // Bounciness (material property)
+    float friction{0.6f};       // Friction coefficient
+    float linearDamping{0.5f};  // Per-second linear damping factor
+    float angularDamping{2.0f}; // Per-second angular damping factor
 
     // Inverse inertia tensor diagonal (local space, for boxes)
     glm::vec3 invInertiaDiag{0.f};
@@ -87,12 +88,15 @@ class MyGameObject {
     MyGameObject(MyGameObject &&) = default;
     MyGameObject &operator=(MyGameObject &&) = default;
 
-    id_t const getId() { return id; };
+    id_t const getId() { return id; }
+    std::shared_ptr<MyTexture> const getTexture() { return texture; }
 
     glm::vec3 color{};
     TransformComponent transform{};
 
     std::shared_ptr<MyModel> model{};
+    std::shared_ptr<MyTexture> texture = nullptr;
+
     std::unique_ptr<PointLightComponent> pointLight = nullptr;
     std::unique_ptr<BulletComponent> bulletCom = nullptr;
     std::unique_ptr<RigidBodyComponent> rigidBody = nullptr;
