@@ -11,10 +11,23 @@ namespace my {
 
 // make this an textureInstance so can have multiple image
 MyTexture::MyTexture(Device &device, const std::string filepath) : myDevice{device} {
-    createTextureImage(filepath);
+    int texWidth, texHeight, texChannels;
+    stbi_uc *pixels = stbi_load(filepath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    assert(pixels && "cannot load pixel image");
+
+    createTextureImage(myDevice, texWidth, texHeight, pixels);
+    stbi_image_free(pixels);
+
     createTextureImageView();
     createTextureSampler();
-};
+}
+
+MyTexture::MyTexture(Device &device, uint32_t width, uint32_t height, const std::vector<uint8_t> &pixels)
+    : myDevice{device} {
+    createTextureImage(myDevice, width, height, pixels.data());
+    createTextureImageView();
+    createTextureSampler();
+}
 
 MyTexture::~MyTexture() {
     vkDestroyImage(myDevice.device(), textureImage, nullptr);
@@ -23,26 +36,18 @@ MyTexture::~MyTexture() {
     vkFreeMemory(myDevice.device(), textureImageMemory, nullptr);
 };
 
-void MyTexture::createTextureImage(const std::string filePath) {
-    int texWidth, texHeight, texChannels;
-    // change this to file path so can load later
-    stbi_uc *pixels = stbi_load(filePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-
-    assert(pixels && "cannot load pixel image");
-
-    MyBuffer stagingBuffer{myDevice, 4, static_cast<uint32_t>(texWidth * texHeight),
+void MyTexture::createTextureImage(Device &device, uint32_t width, uint32_t height, const uint8_t *pixels) {
+    MyBuffer stagingBuffer{myDevice, 4, static_cast<uint32_t>(width * height),
                            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT};
 
     stagingBuffer.map();
-    stagingBuffer.writeToBuffer(pixels);
-
-    stbi_image_free(pixels);
+    stagingBuffer.writeToBuffer((void *)pixels);
 
     // may create helper function to do with imageInfo creation
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.extent = {static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight), 1};
+    imageInfo.extent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
     imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB; // VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK
     imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -58,8 +63,8 @@ void MyTexture::createTextureImage(const std::string filePath) {
 
     myDevice.transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    myDevice.copyBufferToImage(stagingBuffer.getBuffer(), textureImage, static_cast<uint32_t>(texWidth),
-                               static_cast<uint32_t>(texHeight), 1);
+    myDevice.copyBufferToImage(stagingBuffer.getBuffer(), textureImage, static_cast<uint32_t>(width),
+                               static_cast<uint32_t>(height), 1);
     myDevice.transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB,
                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

@@ -2,15 +2,18 @@
 #include "game/keyboard_movement_controller.hpp"
 #include "game/my_Player.hpp"
 #include "game/physics_utils.hpp"
+#include "math/perlin_noise.hpp"
 #include "render_core/my_texture.hpp"
 #include "render_systems/point_light_system.hpp"
 #include "render_systems/simple_render_system.hpp"
 #include "vulkan_core/my_buffer.hpp"
+#include "vulkan_core/swap_chain.hpp"
 
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <cstdio>
 #include <memory>
+#include <vector>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -138,16 +141,8 @@ void FirstApp::loadGameObjects() {
     std::shared_ptr<MyModel> cubeModel = MyModel::createModelFromFile(device, "models/colored_cube.obj");
     std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(device, "models/quad.obj");
 
-    auto perlinViewer = MyGameObject::createGameObject();
-    perlinViewer.model = quadModel;
-    perlinViewer.texture = testTexture2;
-    perlinViewer.transform.translation = {4.f, -2.f, 1.f};
-    perlinViewer.transform.scale = {2.f, 2.f, 2.f};
-    perlinViewer.transform.rotation = {0.0f, glm::quarter_pi<float>(), glm::half_pi<float>()};
-    gameObjects.emplace(perlinViewer.getId(), std::move(perlinViewer));
-
     auto floor = MyGameObject::createGameObject();
-    floor.model = cubeModel;
+    floor.model = quadModel;
     floor.transform.translation = {0.f, 0.5f, 0.f};
     floor.transform.scale = {10.f, 0.2f, 10.f};
     floor.rigidBody = std::make_unique<RigidBodyComponent>();
@@ -156,6 +151,54 @@ void FirstApp::loadGameObjects() {
     floor.rigidBody->computeBoxInertia(floor.transform.scale * 0.5f);
     floor.texture = testTexture1;
     gameObjects.emplace(floor.getId(), std::move(floor));
+
+    auto perlinViewer = MyGameObject::createGameObject();
+    perlinViewer.model = quadModel;
+    perlinViewer.transform.translation = {4.f, -2.f, 1.f};
+    perlinViewer.transform.scale = {2.f, 2.f, 2.f};
+    perlinViewer.transform.rotation = {0.0f, glm::quarter_pi<float>(), glm::half_pi<float>()};
+
+    int perlinWidth = 512;
+    int perlinHeight = 512;
+
+    const int GRID_SIZE = 200;
+
+    std::vector<uint8_t> pixels(perlinWidth * perlinHeight * 4);
+    for (int x = 0; x < perlinWidth; x++) {
+        for (int y = 0; y < perlinHeight; y++) {
+            int index = (y * perlinWidth + x) * 4;
+
+            float val = 0;
+
+            float freq = 1;
+            float amp = 1;
+
+            for (int i = 0; i < 8; i++) {
+                val += PerlinGenarator::perlin(x * freq / GRID_SIZE, y * freq / GRID_SIZE) * amp;
+
+                freq *= 2;
+                amp /= 2;
+            }
+            val *= 1.2f;
+
+            if (val > 1.0f) {
+                val = 1.0f;
+            } else if (val < -1.0f) {
+                val = -1.0f;
+            }
+
+            int color = (int)(((val + 1.0f) * 0.5f) * 255);
+
+            pixels[index] = color;
+            pixels[index + 1] = color;
+            pixels[index + 2] = color;
+            pixels[index + 3] = 255;
+        }
+    }
+
+    auto perlinTexture = std::make_shared<MyTexture>(device, perlinWidth, perlinHeight, pixels);
+    perlinViewer.texture = perlinTexture;
+    gameObjects.emplace(perlinViewer.getId(), std::move(perlinViewer));
 
     auto cube1 = MyGameObject::createGameObject();
     cube1.model = cubeModel;

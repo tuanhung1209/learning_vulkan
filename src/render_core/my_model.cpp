@@ -13,6 +13,7 @@
 #include <glm/gtx/hash.hpp>
 
 namespace std {
+
 template <> struct hash<my::MyModel::Vertex> {
     size_t operator()(my::MyModel::Vertex const &vertex) const {
         size_t seed = 0;
@@ -20,6 +21,7 @@ template <> struct hash<my::MyModel::Vertex> {
         return seed;
     }
 };
+
 } // namespace std
 namespace my {
 MyModel::MyModel(Device &device, const MyModel::Builder &builder) : myDevice{device} {
