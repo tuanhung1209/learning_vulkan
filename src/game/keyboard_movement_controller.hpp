@@ -23,7 +23,7 @@ class KeyboardMovementController {
 
     KeyMappings keys{};
 
-    float movementSpeed{3.0f};
+    float movementSpeed{30.0f};
     float rotationSpeed{1.5f};
 };
 } // namespace my

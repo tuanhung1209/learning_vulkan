@@ -3,6 +3,7 @@
 #include "game/my_Player.hpp"
 #include "game/physics_utils.hpp"
 #include "math/perlin_noise.hpp"
+#include "math/terrain_generation.hpp"
 #include "render_core/my_texture.hpp"
 #include "render_systems/point_light_system.hpp"
 #include "render_systems/simple_render_system.hpp"
@@ -12,6 +13,7 @@
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <cstdio>
+#include <iostream>
 #include <memory>
 #include <vector>
 
@@ -63,13 +65,11 @@ void FirstApp::run() {
     camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
 
     // Initialize Bullet Handler
-    std::shared_ptr<MyModel> bulletModel = MyModel::createModelFromFile(device, "models/cube.obj");
+    std::shared_ptr<MyModel> bulletModel = MyModel::createModelFromFile(device, "assets/models/cube.obj");
     BulletHandler bulletHandler{bulletModel};
 
     // TODO : init an id in the main player file
     auto playerObject = MyGameObject::createGameObject();
-    playerObject.rigidBody = std::make_unique<RigidBodyComponent>();
-    playerObject.rigidBody->friction = 0.2f;
     playerObject.transform.translation = glm::vec3(1.f, -10.f, 1.f);
     MyPlayer mainPlayer{camera, playerObject.getId()};
     gameObjects.emplace(playerObject.getId(), std::move(playerObject));
@@ -104,7 +104,7 @@ void FirstApp::run() {
 
         float aspect = myRenderer.getAspectRatio();
         // camera.setOrthographicProjection(-aspect, aspect, -1, 1, -1, 1);
-        camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 100.f);
+        camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 10000.f);
 
         if (auto commandBuffer = myRenderer.beginFrame()) {
             int frameIndex = myRenderer.getFrameIndex();
@@ -135,22 +135,14 @@ void FirstApp::run() {
 
 void FirstApp::loadGameObjects() {
 
-    auto testTexture1 = std::make_shared<MyTexture>(device, "textures/test1.png");
-    auto testTexture2 = std::make_shared<MyTexture>(device, "textures/test2.png");
+    auto testTexture1 = std::make_shared<MyTexture>(device, "assets/textures/test1.png");
+    auto testTexture2 = std::make_shared<MyTexture>(device, "assets/textures/test2.png");
+    auto grassTexture = std::make_shared<MyTexture>(device, "assets/textures/grass.png");
+    auto waterTexture = std::make_shared<MyTexture>(device, "assets/textures/water.jpg");
 
-    std::shared_ptr<MyModel> cubeModel = MyModel::createModelFromFile(device, "models/colored_cube.obj");
-    std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(device, "models/quad.obj");
-
-    auto floor = MyGameObject::createGameObject();
-    floor.model = quadModel;
-    floor.transform.translation = {0.f, 0.5f, 0.f};
-    floor.transform.scale = {10.f, 0.2f, 10.f};
-    floor.rigidBody = std::make_unique<RigidBodyComponent>();
-    floor.rigidBody->mass = 0.0f;
-    floor.rigidBody->restitution = 0.1f;
-    floor.rigidBody->computeBoxInertia(floor.transform.scale * 0.5f);
-    floor.texture = testTexture1;
-    gameObjects.emplace(floor.getId(), std::move(floor));
+    std::shared_ptr<MyModel> cubeModel =
+        MyModel::createModelFromFile(device, "assets/models/colored_cube.obj");
+    std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(device, "assets/models/quad.obj");
 
     auto perlinViewer = MyGameObject::createGameObject();
     perlinViewer.model = quadModel;
@@ -158,47 +150,64 @@ void FirstApp::loadGameObjects() {
     perlinViewer.transform.scale = {2.f, 2.f, 2.f};
     perlinViewer.transform.rotation = {0.0f, glm::quarter_pi<float>(), glm::half_pi<float>()};
 
-    int perlinWidth = 512;
-    int perlinHeight = 512;
+    int noiseWidth, noiseHeight, resolution;
+    noiseWidth = noiseHeight = resolution = 512;
 
-    const int GRID_SIZE = 200;
+    const int NOISE_SCALE = 150;
+    const int OCTAVES = 12;
 
-    std::vector<uint8_t> pixels(perlinWidth * perlinHeight * 4);
-    for (int x = 0; x < perlinWidth; x++) {
-        for (int y = 0; y < perlinHeight; y++) {
-            int index = (y * perlinWidth + x) * 4;
+    std::vector<uint8_t> noisePixels(noiseWidth * noiseHeight * 4);
+    std::vector<float> heightMap(noiseWidth * noiseHeight);
 
-            float val = 0;
+    for (int x = 0; x < noiseWidth; x++) {
+        for (int y = 0; y < noiseHeight; y++) {
+            float height = 0;
+            float frequency = 1;
+            float amplitude = 1;
 
-            float freq = 1;
-            float amp = 1;
-
-            for (int i = 0; i < 8; i++) {
-                val += PerlinGenarator::perlin(x * freq / GRID_SIZE, y * freq / GRID_SIZE) * amp;
-
-                freq *= 2;
-                amp /= 2;
-            }
-            val *= 1.2f;
-
-            if (val > 1.0f) {
-                val = 1.0f;
-            } else if (val < -1.0f) {
-                val = -1.0f;
+            for (int octave = 0; octave < OCTAVES; octave++) {
+                height += PerlinGenerator::perlin(x * frequency / NOISE_SCALE, y * frequency / NOISE_SCALE) *
+                          amplitude;
+                frequency *= 2;
+                amplitude /= 2;
             }
 
-            int color = (int)(((val + 1.0f) * 0.5f) * 255);
+            height *= 1.2f;
+            height = glm::clamp(height, -1.0f, 1.0f);
 
-            pixels[index] = color;
-            pixels[index + 1] = color;
-            pixels[index + 2] = color;
-            pixels[index + 3] = 255;
+            heightMap[y * noiseWidth + x] = height;
+
+            int index = (y * noiseWidth + x) * 4;
+            int grayscale = (int)(((height + 1.0f) * 0.5f) * 255);
+
+            noisePixels[index] = noisePixels[index + 1] = noisePixels[index + 2] = grayscale;
+            noisePixels[index + 3] = 255;
         }
     }
 
-    auto perlinTexture = std::make_shared<MyTexture>(device, perlinWidth, perlinHeight, pixels);
-    perlinViewer.texture = perlinTexture;
+    auto heightmapTexture = std::make_shared<MyTexture>(device, noiseWidth, noiseHeight, noisePixels);
+    perlinViewer.texture = heightmapTexture;
     gameObjects.emplace(perlinViewer.getId(), std::move(perlinViewer));
+
+    std::shared_ptr<MyModel> terrainModel = TerrainGenerator::generate(device, heightMap, resolution, 1, 10);
+
+    auto floor = MyGameObject::createGameObject();
+    floor.model = quadModel;
+    floor.transform.translation = {0.f, 1.5f, 0.f};
+    floor.transform.scale = {1000.f, 1.f, 1000.f};
+    floor.rigidBody = std::make_unique<RigidBodyComponent>();
+    floor.rigidBody->mass = 0.0f;
+    floor.rigidBody->restitution = 0.1f;
+    floor.rigidBody->computeBoxInertia(floor.transform.scale * 0.5f);
+    floor.texture = waterTexture;
+    gameObjects.emplace(floor.getId(), std::move(floor));
+
+    auto terrain = MyGameObject::createGameObject();
+    terrain.model = terrainModel;
+    terrain.transform.translation = {0.f, 0.5f, 0.f};
+    terrain.transform.scale = {1.f, 5.f, 1.f};
+    terrain.texture = grassTexture;
+    gameObjects.emplace(terrain.getId(), std::move(terrain));
 
     auto cube1 = MyGameObject::createGameObject();
     cube1.model = cubeModel;
@@ -219,6 +228,11 @@ void FirstApp::loadGameObjects() {
     cube2.rigidBody->restitution = 0.1f;
     cube2.rigidBody->computeBoxInertia(cube2.transform.scale * 0.5f);
     gameObjects.emplace(cube2.getId(), std::move(cube2));
+
+    // Sun — warm white, high up, very intense
+    auto sun = MyGameObject::createPointLight(400.f, 8.f, {1.f, 0.95f, 0.8f});
+    sun.transform.translation = {50.f, -100.f, 50.f};
+    gameObjects.emplace(sun.getId(), std::move(sun));
 
     std::vector<glm::vec3> lightColors{{1.f, .1f, .1f}, {.1f, .1f, 1.f}, {.1f, 1.f, .1f},
                                        {1.f, 1.f, .1f}, {.1f, 1.f, 1.f}, {1.f, 1.f, 1.f}};

@@ -41,7 +41,7 @@ void SimpleRenderSystem::createTexturePoolAndSetLayout() {
             .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .build();
 
-    defaultWhiteTexture = std::make_shared<MyTexture>(myDevice, "textures/white.png");
+    defaultWhiteTexture = std::make_shared<MyTexture>(myDevice, "assets/textures/white.png");
 }
 
 void SimpleRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {

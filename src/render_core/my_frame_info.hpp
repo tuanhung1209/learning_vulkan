@@ -1,16 +1,16 @@
 // add frame relevant data into a single object
 #pragma once
 
-#include "render_core/my_camera.hpp"
 #include "game/my_game_object.hpp"
+#include "render_core/my_camera.hpp"
 
 #include <vulkan/vulkan.h>
 
-namespace my{
+namespace my {
 #define MAX_LIGHT 10
 #define MAX_BULLET 100
 
-struct PointLight{
+struct PointLight {
     glm::vec4 position{};
     glm::vec4 color{};
 };
@@ -18,12 +18,12 @@ struct PointLight{
 struct GlobalUbo {
     glm::mat4 projection{1.f};
     glm::mat4 view{1.f};
-    glm::vec4 ambientLightColor{1.f, 1.f, 1.f, .02f};
+    glm::vec4 ambientLightColor{1.f, 1.f, 1.f, .002f};
     PointLight pointLights[MAX_LIGHT];
     int numLights;
 };
 
-struct FrameInfo{
+struct FrameInfo {
     int frameIndex;
     float frameTime;
     VkCommandBuffer commandBuffer;
@@ -32,5 +32,4 @@ struct FrameInfo{
     MyGameObject::Map &gameObjecs;
 };
 
-
-}
+} // namespace my

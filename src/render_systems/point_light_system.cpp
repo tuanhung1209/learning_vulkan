@@ -67,7 +67,8 @@ void PointLightSystem::update(FrameInfo &frameInfo, GlobalUbo &ubo){
 
         assert(lightIndex < MAX_LIGHT && "light overflow");
 
-        obj.transform.translation = glm::vec3(rotateLight * glm::vec4(obj.transform.translation, 1.f));
+        if (obj.pointLight->lightIntensity < 10.f)
+            obj.transform.translation = glm::vec3(rotateLight * glm::vec4(obj.transform.translation, 1.f));
 
         ubo.pointLights[lightIndex].position = glm::vec4(obj.transform.translation, 1.f);
         ubo.pointLights[lightIndex].color = glm::vec4(obj.color, obj.pointLight->lightIntensity);
