@@ -71,6 +71,8 @@ void FirstApp::run() {
     // TODO : init an id in the main player file
     auto playerObject = MyGameObject::createGameObject();
     playerObject.transform.translation = glm::vec3(1.f, -10.f, 1.f);
+    // playerObject.rigidBody = std::make_unique<RigidBodyComponent>();
+
     MyPlayer mainPlayer{camera, playerObject.getId()};
     gameObjects.emplace(playerObject.getId(), std::move(playerObject));
 
@@ -115,6 +117,7 @@ void FirstApp::run() {
             GlobalUbo ubo{};
             ubo.projection = camera.getProjectionMatrix();
             ubo.view = camera.getView();
+            ubo.inverseView = camera.getInverseView();
             PointLightSystem.update(frameInfo, ubo);
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
             uboBuffers[frameIndex]->flush();
@@ -143,18 +146,22 @@ void FirstApp::loadGameObjects() {
     std::shared_ptr<MyModel> cubeModel =
         MyModel::createModelFromFile(device, "assets/models/colored_cube.obj");
     std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(device, "assets/models/quad.obj");
+    std::shared_ptr<MyModel> smoothVase =
+        MyModel::createModelFromFile(device, "assets/models/smooth_vase.obj");
+    std::shared_ptr<MyModel> roughVase = MyModel::createModelFromFile(device, "assets/models/flat_vase.obj");
 
     auto perlinViewer = MyGameObject::createGameObject();
     perlinViewer.model = quadModel;
     perlinViewer.transform.translation = {4.f, -2.f, 1.f};
     perlinViewer.transform.scale = {2.f, 2.f, 2.f};
-    perlinViewer.transform.rotation = {0.0f, glm::quarter_pi<float>(), glm::half_pi<float>()};
+    perlinViewer.transform.rotation = {0.f, glm::quarter_pi<float>(), glm::half_pi<float>()};
 
     int noiseWidth, noiseHeight, resolution;
     noiseWidth = noiseHeight = resolution = 512;
 
-    const int NOISE_SCALE = 150;
-    const int OCTAVES = 12;
+    const float NOISE_SCALE = 120.0f;
+    const int OCTAVES = 10;
+    const float ROTATION_ANGLE = glm::radians(47.0f); // per-octave rotation, breaks grid alignment
 
     std::vector<uint8_t> noisePixels(noiseWidth * noiseHeight * 4);
     std::vector<float> heightMap(noiseWidth * noiseHeight);
@@ -164,15 +171,28 @@ void FirstApp::loadGameObjects() {
             float height = 0;
             float frequency = 1;
             float amplitude = 1;
+            float maxAmp = 0;
+            float angle = 0.0f;
 
             for (int octave = 0; octave < OCTAVES; octave++) {
-                height += PerlinGenerator::perlin(x * frequency / NOISE_SCALE, y * frequency / NOISE_SCALE) *
-                          amplitude;
-                frequency *= 2;
-                amplitude /= 2;
+                // Rotate sample coordinates each octave to break grid-aligned repetition
+                float cosA = glm::cos(angle);
+                float sinA = glm::sin(angle);
+                float sx = (x * cosA - y * sinA) * frequency / NOISE_SCALE;
+                float sy = (x * sinA + y * cosA) * frequency / NOISE_SCALE;
+
+                float n = PerlinGenerator::perlin(sx, sy);
+                n = 1.0f - glm::abs(n); // ridged noise: sharp mountain ridges
+                height += n * amplitude;
+                maxAmp += amplitude;
+                frequency *= 2.0f;
+                amplitude *= 0.45f;
+                angle += ROTATION_ANGLE;
             }
 
-            height *= 1.2f;
+            height /= maxAmp;                // normalize: prevents clamp from cutting off peaks
+            height = glm::pow(height, 1.3f); // power curve: sharpen peaks, deepen valleys
+            height = height * 2.0f - 1.0f;   // remap to [-1, 1]
             height = glm::clamp(height, -1.0f, 1.0f);
 
             heightMap[y * noiseWidth + x] = height;
@@ -193,7 +213,7 @@ void FirstApp::loadGameObjects() {
 
     auto floor = MyGameObject::createGameObject();
     floor.model = quadModel;
-    floor.transform.translation = {0.f, 1.5f, 0.f};
+    floor.transform.translation = {0.f, 150.f, 0.f};
     floor.transform.scale = {1000.f, 1.f, 1000.f};
     floor.rigidBody = std::make_unique<RigidBodyComponent>();
     floor.rigidBody->mass = 0.0f;
@@ -205,13 +225,25 @@ void FirstApp::loadGameObjects() {
     auto terrain = MyGameObject::createGameObject();
     terrain.model = terrainModel;
     terrain.transform.translation = {0.f, 0.5f, 0.f};
-    terrain.transform.scale = {1.f, 5.f, 1.f};
+    terrain.transform.scale = {1.f, 8.f, 1.f};
     terrain.texture = grassTexture;
     gameObjects.emplace(terrain.getId(), std::move(terrain));
 
+    auto smooth_vase = MyGameObject::createGameObject();
+    smooth_vase.model = smoothVase;
+    smooth_vase.transform.translation = {-1.5f, 0.f, 0.f};
+    smooth_vase.transform.scale = {5.f, 5.f, 5.f};
+    gameObjects.emplace(smooth_vase.getId(), std::move(smooth_vase));
+
+    auto flat_vase = MyGameObject::createGameObject();
+    flat_vase.model = roughVase;
+    flat_vase.transform.translation = {1.5f, 0.f, 0.f};
+    flat_vase.transform.scale = {5.f, 5.f, 5.f};
+    gameObjects.emplace(flat_vase.getId(), std::move(flat_vase));
+
     auto cube1 = MyGameObject::createGameObject();
     cube1.model = cubeModel;
-    cube1.transform.translation = {-0.5f, -3.f, 0.f};
+    cube1.transform.translation = {-0.5f, -3.f, 1.f};
     cube1.transform.scale = {0.5f, 0.5f, 0.5f};
     cube1.rigidBody = std::make_unique<RigidBodyComponent>();
     cube1.rigidBody->mass = 1.0f;
@@ -221,7 +253,7 @@ void FirstApp::loadGameObjects() {
 
     auto cube2 = MyGameObject::createGameObject();
     cube2.model = cubeModel;
-    cube2.transform.translation = {0.5f, -15.f, 0.f};
+    cube2.transform.translation = {0.5f, -15.f, 1.f};
     cube2.transform.scale = {0.5f, 0.5f, 0.5f};
     cube2.rigidBody = std::make_unique<RigidBodyComponent>();
     cube2.rigidBody->mass = 2.0f;

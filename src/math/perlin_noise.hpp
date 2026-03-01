@@ -31,17 +31,18 @@ class PerlinGenerator {
         return (distanceX * gradient.x + distanceY * gradient.y);
     }
 
-    // Smoothstep interpolation: (3 - 2w) * w^2
+    // Quintic interpolation: 6w^5 - 15w^4 + 10w^3 (smoother gradients than cubic)
     static float smoothstep(float from, float to, float weight) {
-        return (to - from) * (3.0f - weight * 2.0f) * weight * weight + from;
+        float w = weight * weight * weight * (weight * (weight * 6.0f - 15.0f) + 10.0f);
+        return from + (to - from) * w;
     }
 
     static float perlin(float x, float y) {
-        // Grid cell corner indices
-        int x0 = int(x), x1 = x0 + 1;
-        int y0 = int(y), y1 = y0 + 1;
+        // Grid cell corner indices — must use floor(), not int(), to handle negative coords
+        int x0 = (int)glm::floor(x), x1 = x0 + 1;
+        int y0 = (int)glm::floor(y), y1 = y0 + 1;
 
-        // Local position within the cell [0, 1]
+        // Local position within the cell, guaranteed in [0, 1]
         float localX = x - float(x0);
         float localY = y - float(y0);
 
