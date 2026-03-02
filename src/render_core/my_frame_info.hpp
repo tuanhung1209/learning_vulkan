@@ -22,6 +22,10 @@ struct GlobalUbo {
     glm::vec4 ambientLightColor{1.f, 1.f, 1.f, .02f};
     PointLight pointLights[MAX_LIGHT];
     int numLights;
+
+    alignas(16) glm::vec4 fogColor{0.5f, 0.6f, 0.7f, 1.0f};
+    float fogNear{10.f};
+    float fogFar{100.f};
 };
 
 struct FrameInfo {

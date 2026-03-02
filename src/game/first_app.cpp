@@ -118,6 +118,11 @@ void FirstApp::run() {
             ubo.projection = camera.getProjectionMatrix();
             ubo.view = camera.getView();
             ubo.inverseView = camera.getInverseView();
+
+            ubo.fogColor = glm::vec4(0.5f, 0.6f, 0.7f, 1.0f);
+            ubo.fogNear = 120.f;
+            ubo.fogFar = 512.f;
+
             PointLightSystem.update(frameInfo, ubo);
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
             uboBuffers[frameIndex]->flush();
@@ -159,30 +164,23 @@ void FirstApp::loadGameObjects() {
     int noiseWidth, noiseHeight, resolution;
     noiseWidth = noiseHeight = resolution = 512;
 
-    const float NOISE_SCALE = 120.0f;
+    const float NOISE_SCALE = 140.0f;
     const int OCTAVES = 10;
-    const float ROTATION_ANGLE = glm::radians(47.0f); // per-octave rotation, breaks grid alignment
+    const float ROTATION_ANGLE = glm::radians(47.0f);
 
     std::vector<uint8_t> noisePixels(noiseWidth * noiseHeight * 4);
     std::vector<float> heightMap(noiseWidth * noiseHeight);
 
     for (int x = 0; x < noiseWidth; x++) {
         for (int y = 0; y < noiseHeight; y++) {
-            float height = 0;
-            float frequency = 1;
-            float amplitude = 1;
-            float maxAmp = 0;
-            float angle = 0.0f;
+            float height = 0, frequency = 1, amplitude = 1, maxAmp = 0, angle = 0.0f;
 
             for (int octave = 0; octave < OCTAVES; octave++) {
-                // Rotate sample coordinates each octave to break grid-aligned repetition
-                float cosA = glm::cos(angle);
-                float sinA = glm::sin(angle);
+                float cosA = glm::cos(angle), sinA = glm::sin(angle);
                 float sx = (x * cosA - y * sinA) * frequency / NOISE_SCALE;
                 float sy = (x * sinA + y * cosA) * frequency / NOISE_SCALE;
-
                 float n = PerlinGenerator::perlin(sx, sy);
-                n = 1.0f - glm::abs(n); // ridged noise: sharp mountain ridges
+                n = 1.0f - glm::abs(n);
                 height += n * amplitude;
                 maxAmp += amplitude;
                 frequency *= 2.0f;
@@ -190,16 +188,15 @@ void FirstApp::loadGameObjects() {
                 angle += ROTATION_ANGLE;
             }
 
-            height /= maxAmp;                // normalize: prevents clamp from cutting off peaks
-            height = glm::pow(height, 1.3f); // power curve: sharpen peaks, deepen valleys
-            height = height * 2.0f - 1.0f;   // remap to [-1, 1]
+            height /= maxAmp;
+            height = glm::pow(height, 1.3f);
+            height = height * 2.0f - 1.0f;
             height = glm::clamp(height, -1.0f, 1.0f);
 
             heightMap[y * noiseWidth + x] = height;
 
             int index = (y * noiseWidth + x) * 4;
             int grayscale = (int)(((height + 1.0f) * 0.5f) * 255);
-
             noisePixels[index] = noisePixels[index + 1] = noisePixels[index + 2] = grayscale;
             noisePixels[index + 3] = 255;
         }
@@ -213,7 +210,7 @@ void FirstApp::loadGameObjects() {
 
     auto floor = MyGameObject::createGameObject();
     floor.model = quadModel;
-    floor.transform.translation = {0.f, 150.f, 0.f};
+    floor.transform.translation = {0.f, 50.f, 0.f};
     floor.transform.scale = {1000.f, 1.f, 1000.f};
     floor.rigidBody = std::make_unique<RigidBodyComponent>();
     floor.rigidBody->mass = 0.0f;
@@ -262,8 +259,8 @@ void FirstApp::loadGameObjects() {
     gameObjects.emplace(cube2.getId(), std::move(cube2));
 
     // Sun — warm white, high up, very intense
-    auto sun = MyGameObject::createPointLight(400.f, 8.f, {1.f, 0.95f, 0.8f});
-    sun.transform.translation = {50.f, -100.f, 50.f};
+    auto sun = MyGameObject::createPointLight(2500000.f, 8.f, {1.f, 0.95f, 0.8f});
+    sun.transform.translation = {256.f, -2000.f, 256.f};
     gameObjects.emplace(sun.getId(), std::move(sun));
 
     std::vector<glm::vec3> lightColors{{1.f, .1f, .1f}, {.1f, .1f, 1.f}, {.1f, 1.f, .1f},

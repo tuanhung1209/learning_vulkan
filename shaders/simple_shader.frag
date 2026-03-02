@@ -19,6 +19,9 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 ambientLightColor;
     PointLight pointlights[10];
     int numLights;
+    vec4 fogColor;
+    float fogNear;
+    float fogFar;
 } ubo;
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
@@ -52,13 +55,18 @@ void main() {
         float blinnTerm = dot(surfaceNormal, halfAngle);
         blinnTerm = clamp(blinnTerm, 0, 1);
         blinnTerm = pow(blinnTerm, 512.0);
-        // specularLight += light.color.xyz * intensity * blinnTerm; if want highLight
+        // specularLight += light.color.xyz * intensity * blinnTerm; if want intese highLight
         specularLight += intensity * blinnTerm; 
     }
 
-    // Sample the texture using UV coordinates
     vec3 texColor = texture(texSampler, fragTexCoord).rgb;
 
-    // Multiply texture color with lighting (replaces fragColor with texture)
-    outColor = vec4(diffuseLight * texColor + specularLight * fragColor, 1.0);
+    vec3 litColor  = diffuseLight * texColor + specularLight * fragColor;
+
+    // add fog
+    float dist = length(cameraPosWorld - fragPosWorld);
+    float fogFactor = clamp((ubo.fogFar - dist) / (ubo.fogFar - ubo.fogNear), 0.0, 1.0);
+    vec3 finalColor = mix(ubo.fogColor.rgb, litColor, fogFactor);
+
+    outColor = vec4(finalColor, 1.0);
 }

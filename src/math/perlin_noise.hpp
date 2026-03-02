@@ -31,7 +31,6 @@ class PerlinGenerator {
         return (distanceX * gradient.x + distanceY * gradient.y);
     }
 
-    // Quintic interpolation: 6w^5 - 15w^4 + 10w^3 (smoother gradients than cubic)
     static float smoothstep(float from, float to, float weight) {
         float w = weight * weight * weight * (weight * (weight * 6.0f - 15.0f) + 10.0f);
         return from + (to - from) * w;
