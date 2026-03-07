@@ -33,7 +33,6 @@ void MyCamera::setViewDirection(glm::vec3 position, glm::vec3 direction, glm::ve
     inverseViewMatrix[2][0] = w.x;
     inverseViewMatrix[2][1] = w.y;
     inverseViewMatrix[2][2] = w.z;
-    inverseViewMatrix[1][2] = u.z;
     inverseViewMatrix[3][0] = position.x;
     inverseViewMatrix[3][1] = position.y;
     inverseViewMatrix[3][2] = position.z;
@@ -79,7 +78,6 @@ void MyCamera::setViewYXZ(glm::vec3 position, glm::vec3 rotation) {
     inverseViewMatrix[2][0] = w.x;
     inverseViewMatrix[2][1] = w.y;
     inverseViewMatrix[2][2] = w.z;
-    inverseViewMatrix[1][2] = u.z;
     inverseViewMatrix[3][0] = position.x;
     inverseViewMatrix[3][1] = position.y;
     inverseViewMatrix[3][2] = position.z;

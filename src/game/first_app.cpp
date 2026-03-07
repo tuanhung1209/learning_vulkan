@@ -2,8 +2,8 @@
 #include "game/keyboard_movement_controller.hpp"
 #include "game/my_Player.hpp"
 #include "game/physics_utils.hpp"
+#include "game/terrain_generation.hpp"
 #include "math/perlin_noise.hpp"
-#include "math/terrain_generation.hpp"
 #include "render_core/my_texture.hpp"
 #include "render_systems/point_light_system.hpp"
 #include "render_systems/simple_render_system.hpp"
@@ -13,6 +13,7 @@
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <cstdio>
+#include <glm/common.hpp>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -61,18 +62,15 @@ void FirstApp::run() {
                                       globalSetLayout->getDescriptorSetLayout()};
     MyCamera camera{};
 
-    // camera.setViewDirection(glm::vec3(0.f), glm::vec3(0.7f, 0.f, 1.f));
     camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
 
     // Initialize Bullet Handler
     std::shared_ptr<MyModel> bulletModel = MyModel::createModelFromFile(device, "assets/models/cube.obj");
     BulletHandler bulletHandler{bulletModel};
 
-    // TODO : init an id in the main player file
     auto playerObject = MyGameObject::createGameObject();
     playerObject.transform.translation = glm::vec3(1.f, -10.f, 1.f);
     // playerObject.rigidBody = std::make_unique<RigidBodyComponent>();
-
     MyPlayer mainPlayer{camera, playerObject.getId()};
     gameObjects.emplace(playerObject.getId(), std::move(playerObject));
 
@@ -96,16 +94,7 @@ void FirstApp::run() {
         // Physics: fixed timestep, iterative solver, collision detection + resolution
         physicsWorld.step(gameObjects, bulletHandler.getBullets(), frameTime);
 
-        if (glfwGetKey(window.getWindow(), GLFW_KEY_F) == GLFW_PRESS) {
-            for (auto &kv : gameObjects) {
-                if (kv.second.rigidBody && kv.second.rigidBody->mass == 2.0f) {
-                    kv.second.rigidBody->velocity.x = -5.0f;
-                }
-            }
-        }
-
         float aspect = myRenderer.getAspectRatio();
-        // camera.setOrthographicProjection(-aspect, aspect, -1, 1, -1, 1);
         camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 10000.f);
 
         if (auto commandBuffer = myRenderer.beginFrame()) {
@@ -143,9 +132,8 @@ void FirstApp::run() {
 
 void FirstApp::loadGameObjects() {
 
-    auto testTexture1 = std::make_shared<MyTexture>(device, "assets/textures/test1.png");
-    auto testTexture2 = std::make_shared<MyTexture>(device, "assets/textures/test2.png");
     auto grassTexture = std::make_shared<MyTexture>(device, "assets/textures/grass.png");
+    auto grassTexture2 = std::make_shared<MyTexture>(device, "assets/textures/grass_solid.png");
     auto waterTexture = std::make_shared<MyTexture>(device, "assets/textures/water.jpg");
 
     std::shared_ptr<MyModel> cubeModel =
@@ -155,76 +143,44 @@ void FirstApp::loadGameObjects() {
         MyModel::createModelFromFile(device, "assets/models/smooth_vase.obj");
     std::shared_ptr<MyModel> roughVase = MyModel::createModelFromFile(device, "assets/models/flat_vase.obj");
 
-    auto perlinViewer = MyGameObject::createGameObject();
-    perlinViewer.model = quadModel;
-    perlinViewer.transform.translation = {4.f, -2.f, 1.f};
-    perlinViewer.transform.scale = {2.f, 2.f, 2.f};
-    perlinViewer.transform.rotation = {0.f, glm::quarter_pi<float>(), glm::half_pi<float>()};
-
     int noiseWidth, noiseHeight, resolution;
     noiseWidth = noiseHeight = resolution = 512;
-
-    const float NOISE_SCALE = 140.0f;
+    const float NOISE_SCALE = 250.0f;
     const int OCTAVES = 10;
     const float ROTATION_ANGLE = glm::radians(47.0f);
 
     std::vector<uint8_t> noisePixels(noiseWidth * noiseHeight * 4);
     std::vector<float> heightMap(noiseWidth * noiseHeight);
+    PerlinGenerator::populateNoise(OCTAVES, NOISE_SCALE, noiseWidth, noiseHeight, ROTATION_ANGLE, noisePixels,
+                                   heightMap);
 
-    for (int x = 0; x < noiseWidth; x++) {
-        for (int y = 0; y < noiseHeight; y++) {
-            float height = 0, frequency = 1, amplitude = 1, maxAmp = 0, angle = 0.0f;
-
-            for (int octave = 0; octave < OCTAVES; octave++) {
-                float cosA = glm::cos(angle), sinA = glm::sin(angle);
-                float sx = (x * cosA - y * sinA) * frequency / NOISE_SCALE;
-                float sy = (x * sinA + y * cosA) * frequency / NOISE_SCALE;
-                float n = PerlinGenerator::perlin(sx, sy);
-                n = 1.0f - glm::abs(n);
-                height += n * amplitude;
-                maxAmp += amplitude;
-                frequency *= 2.0f;
-                amplitude *= 0.45f;
-                angle += ROTATION_ANGLE;
-            }
-
-            height /= maxAmp;
-            height = glm::pow(height, 1.3f);
-            height = height * 2.0f - 1.0f;
-            height = glm::clamp(height, -1.0f, 1.0f);
-
-            heightMap[y * noiseWidth + x] = height;
-
-            int index = (y * noiseWidth + x) * 4;
-            int grayscale = (int)(((height + 1.0f) * 0.5f) * 255);
-            noisePixels[index] = noisePixels[index + 1] = noisePixels[index + 2] = grayscale;
-            noisePixels[index + 3] = 255;
-        }
-    }
-
+    auto perlinViewer = MyGameObject::createGameObject();
+    perlinViewer.model = quadModel;
+    perlinViewer.transform.translation = {4.f, -2.f, 1.f};
+    perlinViewer.transform.scale = {2.f, 2.f, 2.f};
+    perlinViewer.transform.rotation = {0.f, glm::quarter_pi<float>(), glm::half_pi<float>()};
     auto heightmapTexture = std::make_shared<MyTexture>(device, noiseWidth, noiseHeight, noisePixels);
     perlinViewer.texture = heightmapTexture;
     gameObjects.emplace(perlinViewer.getId(), std::move(perlinViewer));
 
-    std::shared_ptr<MyModel> terrainModel = TerrainGenerator::generate(device, heightMap, resolution, 1, 10);
-
-    auto floor = MyGameObject::createGameObject();
-    floor.model = quadModel;
-    floor.transform.translation = {0.f, 50.f, 0.f};
-    floor.transform.scale = {1000.f, 1.f, 1000.f};
-    floor.rigidBody = std::make_unique<RigidBodyComponent>();
-    floor.rigidBody->mass = 0.0f;
-    floor.rigidBody->restitution = 0.1f;
-    floor.rigidBody->computeBoxInertia(floor.transform.scale * 0.5f);
-    floor.texture = waterTexture;
-    gameObjects.emplace(floor.getId(), std::move(floor));
-
     auto terrain = MyGameObject::createGameObject();
+    std::shared_ptr<MyModel> terrainModel = TerrainGenerator::generate(device, heightMap, resolution, 1, 10);
     terrain.model = terrainModel;
     terrain.transform.translation = {0.f, 0.5f, 0.f};
     terrain.transform.scale = {1.f, 8.f, 1.f};
     terrain.texture = grassTexture;
     gameObjects.emplace(terrain.getId(), std::move(terrain));
+
+    auto sea = MyGameObject::createGameObject();
+    sea.model = quadModel;
+    sea.transform.translation = {0.f, 30.f, 0.f};
+    sea.transform.scale = {1000.f, 1.f, 1000.f};
+    sea.rigidBody = std::make_unique<RigidBodyComponent>();
+    sea.rigidBody->mass = 0.0f;
+    sea.rigidBody->restitution = 0.1f;
+    sea.rigidBody->computeBoxInertia(sea.transform.scale * 0.5f);
+    sea.texture = waterTexture;
+    gameObjects.emplace(sea.getId(), std::move(sea));
 
     auto smooth_vase = MyGameObject::createGameObject();
     smooth_vase.model = smoothVase;
@@ -258,7 +214,6 @@ void FirstApp::loadGameObjects() {
     cube2.rigidBody->computeBoxInertia(cube2.transform.scale * 0.5f);
     gameObjects.emplace(cube2.getId(), std::move(cube2));
 
-    // Sun — warm white, high up, very intense
     auto sun = MyGameObject::createPointLight(2500000.f, 8.f, {1.f, 0.95f, 0.8f});
     sun.transform.translation = {256.f, -2000.f, 256.f};
     gameObjects.emplace(sun.getId(), std::move(sun));

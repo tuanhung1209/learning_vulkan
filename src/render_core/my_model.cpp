@@ -49,18 +49,18 @@ void MyModel::createVertexBuffers(const std::vector<Vertex> &vertices) {
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount;
     uint32_t vertexSize = sizeof(vertices[0]);
 
-    MyBuffer statgingBuffer{myDevice, vertexSize, vertexCount, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT};
+    MyBuffer stagingBuffer{myDevice, vertexSize, vertexCount, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT};
 
-    statgingBuffer.map();
-    statgingBuffer.writeToBuffer((void *)vertices.data());
+    stagingBuffer.map();
+    stagingBuffer.writeToBuffer((void *)vertices.data());
 
     vertexBuffer =
         std::make_unique<MyBuffer>(myDevice, vertexSize, vertexCount,
                                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    myDevice.copyBuffer(statgingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize);
+    myDevice.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize);
 }
 
 void MyModel::createIndexBuffers(const std::vector<uint32_t> &indicies) {

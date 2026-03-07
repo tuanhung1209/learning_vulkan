@@ -1,12 +1,8 @@
 #include "my_abundance_object_handler.hpp"
+#include "render_core/my_frame_info.hpp"
 #include <memory>
 
 namespace my {
-
-struct SimplePushConstantData {
-    glm::mat4 modelMatrix{1.f};
-    glm::mat4 normalMatrix{1.f};
-};
 
 BulletHandler::BulletHandler(std::shared_ptr<MyModel> model) : bulletModel{model} {
     bullets.reserve(MAX_BULLET);
@@ -29,7 +25,7 @@ void BulletHandler::spawnBullet(glm::vec3 position, glm::vec3 direction, glm::ve
             bullet->transform.rotation = rotation;
             bullet->transform.scale = {0.02f, 0.02f, 0.2f};
 
-            bullet->bulletCom->velocity = direction * 30.0f;  // Fast bullet
+            bullet->bulletCom->velocity = direction * 30.0f; // Fast bullet
             bullet->bulletCom->lifeTime = 5.0f;
 
             bullet->rigidBody->velocity = bullet->bulletCom->velocity;

@@ -1,4 +1,5 @@
 #include "render_systems/simple_render_system.hpp"
+#include "render_core/my_frame_info.hpp"
 #include "vulkan_core/my_descriptors.hpp"
 #include "vulkan_core/swap_chain.hpp"
 #include <GLFW/glfw3.h>
@@ -12,11 +13,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 namespace my {
-
-struct SimplePushConstantData {
-    glm::mat4 modelMatrix{1.f};
-    glm::mat4 normalMatrix{1.f};
-};
 
 SimpleRenderSystem::SimpleRenderSystem(Device &device, VkRenderPass renderPass,
                                        VkDescriptorSetLayout globalSetLayout)
