@@ -152,7 +152,8 @@ void FirstApp::loadGameObjects() {
     std::vector<uint8_t> noisePixels(noiseWidth * noiseHeight * 4);
     std::vector<float> heightMap(noiseWidth * noiseHeight);
     PerlinGenerator::populateNoise(OCTAVES, NOISE_SCALE, noiseWidth, noiseHeight, ROTATION_ANGLE, noisePixels,
-                                   heightMap);
+                                   heightMap, 2);
+    TerrainGenerator::addIslandProperty(heightMap, resolution);
 
     auto perlinViewer = MyGameObject::createGameObject();
     perlinViewer.model = quadModel;
@@ -164,16 +165,16 @@ void FirstApp::loadGameObjects() {
     gameObjects.emplace(perlinViewer.getId(), std::move(perlinViewer));
 
     auto terrain = MyGameObject::createGameObject();
-    std::shared_ptr<MyModel> terrainModel = TerrainGenerator::generate(device, heightMap, resolution, 1, 10);
+    std::shared_ptr<MyModel> terrainModel = TerrainGenerator::generate(device, heightMap, resolution, 1, 15);
     terrain.model = terrainModel;
     terrain.transform.translation = {0.f, 0.5f, 0.f};
     terrain.transform.scale = {1.f, 8.f, 1.f};
-    terrain.texture = grassTexture;
+    // terrain.texture = grassTexture;
     gameObjects.emplace(terrain.getId(), std::move(terrain));
 
     auto sea = MyGameObject::createGameObject();
     sea.model = quadModel;
-    sea.transform.translation = {0.f, 30.f, 0.f};
+    sea.transform.translation = {0.f, 0.f, 0.f};
     sea.transform.scale = {1000.f, 1.f, 1000.f};
     sea.rigidBody = std::make_unique<RigidBodyComponent>();
     sea.rigidBody->mass = 0.0f;

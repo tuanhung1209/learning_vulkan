@@ -61,7 +61,7 @@ void main() {
 
     vec3 texColor = texture(texSampler, fragTexCoord).rgb;
 
-    vec3 litColor  = diffuseLight * texColor + specularLight * fragColor;
+    vec3 litColor  = diffuseLight * texColor * fragColor + specularLight * fragColor;
 
     // add fog
     float dist = length(cameraPosWorld - fragPosWorld);
