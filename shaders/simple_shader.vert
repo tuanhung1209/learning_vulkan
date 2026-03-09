@@ -21,11 +21,13 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     mat4 view;
     mat4 inverseView;
     vec4 ambientLightColor;
-    PointLight pointlights[];
+    PointLight pointlights[10];
     int numLights;
     vec4 fogColor;
     float fogNear;
     float fogFar;
+    vec4 horizonColor;
+    vec4 skyColor;
 } ubo;
 
 layout(push_constant) uniform Push{

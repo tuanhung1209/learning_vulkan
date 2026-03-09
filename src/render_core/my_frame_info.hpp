@@ -26,6 +26,9 @@ struct GlobalUbo {
     alignas(16) glm::vec4 fogColor{0.5f, 0.6f, 0.7f, 1.0f};
     float fogNear{10.f};
     float fogFar{100.f};
+
+    alignas(16) glm::vec4 horizonColor{0.05f, 0.3f, 1.f, 1.f};
+    glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};
 };
 
 struct FrameInfo {

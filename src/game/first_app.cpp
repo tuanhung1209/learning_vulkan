@@ -7,6 +7,7 @@
 #include "render_core/my_texture.hpp"
 #include "render_systems/point_light_system.hpp"
 #include "render_systems/simple_render_system.hpp"
+#include "render_systems/sky_render_system.hpp"
 #include "vulkan_core/my_buffer.hpp"
 #include "vulkan_core/swap_chain.hpp"
 
@@ -60,6 +61,8 @@ void FirstApp::run() {
                                           globalSetLayout->getDescriptorSetLayout()};
     PointLightSystem PointLightSystem{device, myRenderer.getSwapChainRenderPass(),
                                       globalSetLayout->getDescriptorSetLayout()};
+    SkyRenderSystem skyRenderSystem{device, myRenderer.getSwapChainRenderPass(),
+                                    globalSetLayout->getDescriptorSetLayout()};
     MyCamera camera{};
 
     camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
@@ -108,9 +111,12 @@ void FirstApp::run() {
             ubo.view = camera.getView();
             ubo.inverseView = camera.getInverseView();
 
-            ubo.fogColor = glm::vec4(0.5f, 0.6f, 0.7f, 1.0f);
-            ubo.fogNear = 120.f;
-            ubo.fogFar = 512.f;
+            ubo.fogColor = glm::vec4(0.3f, 0.2f, 0.15f, 1.0f);
+            ubo.fogNear = 300.f;
+            ubo.fogFar = 1500.f;
+
+            ubo.horizonColor = {1.f, 0.4f, 0.1f, 1.f};
+            ubo.skyColor = {0.02f, 0.02f, 0.05f, 1.f};
 
             PointLightSystem.update(frameInfo, ubo);
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
@@ -118,6 +124,7 @@ void FirstApp::run() {
 
             // line below to render
             myRenderer.beginSwapChainRenderPass(commandBuffer);
+            skyRenderSystem.renderSky(frameInfo);
             simpleRenderSystem.renderGameObjects(frameInfo);
 
             bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getPipelineLayout());
@@ -142,6 +149,7 @@ void FirstApp::loadGameObjects() {
     std::shared_ptr<MyModel> smoothVase =
         MyModel::createModelFromFile(device, "assets/models/smooth_vase.obj");
     std::shared_ptr<MyModel> roughVase = MyModel::createModelFromFile(device, "assets/models/flat_vase.obj");
+    std::shared_ptr<MyModel> sphereModel = MyModel::createModelFromFile(device, "assets/models/sphere.obj");
 
     int noiseWidth, noiseHeight, resolution;
     noiseWidth = noiseHeight = resolution = 512;
@@ -175,7 +183,7 @@ void FirstApp::loadGameObjects() {
     auto sea = MyGameObject::createGameObject();
     sea.model = quadModel;
     sea.transform.translation = {0.f, 0.f, 0.f};
-    sea.transform.scale = {1000.f, 1.f, 1000.f};
+    sea.transform.scale = {10000.f, 1.f, 10000.f};
     sea.rigidBody = std::make_unique<RigidBodyComponent>();
     sea.rigidBody->mass = 0.0f;
     sea.rigidBody->restitution = 0.1f;
@@ -194,6 +202,12 @@ void FirstApp::loadGameObjects() {
     flat_vase.transform.translation = {1.5f, 0.f, 0.f};
     flat_vase.transform.scale = {5.f, 5.f, 5.f};
     gameObjects.emplace(flat_vase.getId(), std::move(flat_vase));
+
+    auto sphere = MyGameObject::createGameObject();
+    sphere.model = sphereModel;
+    sphere.transform.translation = {1.5f, 0.f, 2.f};
+    sphere.transform.scale = {5.f, 5.f, 5.f};
+    gameObjects.emplace(sphere.getId(), std::move(sphere));
 
     auto cube1 = MyGameObject::createGameObject();
     cube1.model = cubeModel;
