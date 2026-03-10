@@ -28,6 +28,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     float fogFar;
     vec4 horizonColor;
     vec4 skyColor;
+    vec4 sunDirection;
 } ubo;
 
 layout(push_constant) uniform Push{

@@ -117,6 +117,7 @@ void FirstApp::run() {
 
             ubo.horizonColor = {1.f, 0.4f, 0.1f, 1.f};
             ubo.skyColor = {0.02f, 0.02f, 0.05f, 1.f};
+            ubo.sunDirection = glm::vec4(glm::normalize(glm::vec3(1.f, -0.22f, 0.5f)), 0.f);
 
             PointLightSystem.update(frameInfo, ubo);
             uboBuffers[frameIndex]->writeToBuffer(&ubo);

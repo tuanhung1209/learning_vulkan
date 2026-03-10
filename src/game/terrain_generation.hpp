@@ -38,6 +38,16 @@ class TerrainGenerator {
 
         float offSet = (gridSize - 1) * cellSize * 0.5f;
 
+        glm::vec3 sandColor = {1.f, 1.f, 0.3f};
+        glm::vec3 grassColor = {.0f, .52f, .0f};
+        glm::vec3 rockColor = {0.5f, 0.5f, 0.5f};
+        glm::vec3 snowColor = {1.f, 1.f, 1.f};
+
+        float sandEnd = -0.5f;  // sand
+        float grassEnd = -2.0f; // grass
+        float rockEnd = -4.5f;  // rock
+        float snowEnd = -6.0f;  // snow
+
         for (int x = 0; x < gridSize; x++) {
             for (int z = 0; z < gridSize; z++) {
                 MyModel::Vertex vertex{};
@@ -47,16 +57,6 @@ class TerrainGenerator {
 
                 vertex.uv.x = (float)x / (gridSize - 1);
                 vertex.uv.y = (float)z / (gridSize - 1);
-
-                glm::vec3 sandColor = {1.f, 1.f, 0.3f};
-                glm::vec3 grassColor = {.0f, .52f, .0f};
-                glm::vec3 rockColor = {0.5f, 0.5f, 0.5f};
-                glm::vec3 snowColor = {1.f, 1.f, 1.f};
-
-                float sandEnd = -0.5f;  // sand
-                float grassEnd = -2.0f; // grass
-                float rockEnd = -4.5f;  // rock
-                float snowEnd = -6.0f;  // snow
 
                 float y = vertex.position.y;
                 if (y > sandEnd) {
