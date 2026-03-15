@@ -63,7 +63,8 @@ class PerlinGenerator {
 
     static void populateNoise(int OCTAVES, int NOISE_SCALE, int noiseWidth, int noiseHeight,
                               float ROTATION_ANGLE, std::vector<uint8_t> &noisePixels,
-                              std::vector<float> &heightMap, int seed) {
+                              std::vector<float> &heightMap, int seed, float lacunarity = 2.0f,
+                              float persistence = 0.45f) {
         for (int x = 0; x < noiseWidth; x++) {
             for (int y = 0; y < noiseHeight; y++) {
                 float height = 0, frequency = 1, amplitude = 1, angle = 0.0f;
@@ -76,8 +77,8 @@ class PerlinGenerator {
 
                     height += n * amplitude;
 
-                    frequency *= 2.0f;
-                    amplitude *= 0.45f;
+                    frequency *= lacunarity;
+                    amplitude *= persistence;
                     angle += ROTATION_ANGLE;
                 }
 

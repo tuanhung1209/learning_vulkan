@@ -5,6 +5,7 @@
 // std lib headers
 #include <string>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace my {
 
@@ -69,6 +70,9 @@ class Device {
                                VkImageLayout newLayout);
 
     VkPhysicalDeviceProperties properties;
+
+    VkInstance const getInstance() { return instance; }
+    VkPhysicalDevice const getPhysicaldevice() { return physicalDevice; }
 
   private:
     void createInstance();

@@ -3,7 +3,8 @@
 #include "game/my_Player.hpp"
 #include "game/physics_utils.hpp"
 #include "game/terrain_generation.hpp"
-#include "math/perlin_noise.hpp"
+#include "imgui.h"
+#include "render_core/my_imgui.hpp"
 #include "render_core/my_texture.hpp"
 #include "render_systems/point_light_system.hpp"
 #include "render_systems/simple_render_system.hpp"
@@ -63,6 +64,12 @@ void FirstApp::run() {
                                       globalSetLayout->getDescriptorSetLayout()};
     SkyRenderSystem skyRenderSystem{device, myRenderer.getSwapChainRenderPass(),
                                     globalSetLayout->getDescriptorSetLayout()};
+    ImGuiWrapper guiRenderSystem{device, window, myRenderer.getSwapChainRenderPass()};
+
+    TerrainGenerator terrainGen{device};
+    std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(device, "assets/models/quad.obj");
+    terrainGen.createTerrain(gameObjects, quadModel);
+
     MyCamera camera{};
 
     camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
@@ -80,6 +87,8 @@ void FirstApp::run() {
     PhysicsWorld physicsWorld;
     auto currentTime = std::chrono::high_resolution_clock::now();
 
+    bool shouldRegenerateTerrain = false;
+
     while (!window.shouldClose()) {
         glfwPollEvents();
 
@@ -88,7 +97,11 @@ void FirstApp::run() {
             std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
         currentTime = newTime;
 
-        frameTime = std::min(frameTime, 0.05f);
+        if (shouldRegenerateTerrain) {
+            vkDeviceWaitIdle(device.device());
+            terrainGen.regenerate(gameObjects);
+            shouldRegenerateTerrain = false;
+        }
 
         // Update player input and bullet lifetimes
         mainPlayer.update(window.getWindow(), frameTime, gameObjects, bulletHandler);
@@ -104,6 +117,15 @@ void FirstApp::run() {
             int frameIndex = myRenderer.getFrameIndex();
             FrameInfo frameInfo{frameIndex, frameTime, commandBuffer, camera, globalDescriptorSet[frameIndex],
                                 gameObjects};
+
+            guiRenderSystem.newFrame();
+            ImGui::Begin("Debug");
+            ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+            ImGui::End();
+
+            if (terrainGen.drawGui()) {
+                shouldRegenerateTerrain = true;
+            }
 
             // line below to update descriptorInfo
             GlobalUbo ubo{};
@@ -131,6 +153,8 @@ void FirstApp::run() {
             bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getPipelineLayout());
             PointLightSystem.renderLight(frameInfo);
 
+            guiRenderSystem.renderGui(frameInfo);
+
             myRenderer.endSwapChainRenderPass(commandBuffer);
             myRenderer.endFrame();
         }
@@ -151,35 +175,6 @@ void FirstApp::loadGameObjects() {
         MyModel::createModelFromFile(device, "assets/models/smooth_vase.obj");
     std::shared_ptr<MyModel> roughVase = MyModel::createModelFromFile(device, "assets/models/flat_vase.obj");
     std::shared_ptr<MyModel> sphereModel = MyModel::createModelFromFile(device, "assets/models/sphere.obj");
-
-    int noiseWidth, noiseHeight, resolution;
-    noiseWidth = noiseHeight = resolution = 512;
-    const float NOISE_SCALE = 250.0f;
-    const int OCTAVES = 10;
-    const float ROTATION_ANGLE = glm::radians(47.0f);
-
-    std::vector<uint8_t> noisePixels(noiseWidth * noiseHeight * 4);
-    std::vector<float> heightMap(noiseWidth * noiseHeight);
-    PerlinGenerator::populateNoise(OCTAVES, NOISE_SCALE, noiseWidth, noiseHeight, ROTATION_ANGLE, noisePixels,
-                                   heightMap, 2);
-    TerrainGenerator::addIslandProperty(heightMap, resolution);
-
-    auto perlinViewer = MyGameObject::createGameObject();
-    perlinViewer.model = quadModel;
-    perlinViewer.transform.translation = {4.f, -2.f, 1.f};
-    perlinViewer.transform.scale = {2.f, 2.f, 2.f};
-    perlinViewer.transform.rotation = {0.f, glm::quarter_pi<float>(), glm::half_pi<float>()};
-    auto heightmapTexture = std::make_shared<MyTexture>(device, noiseWidth, noiseHeight, noisePixels);
-    perlinViewer.texture = heightmapTexture;
-    gameObjects.emplace(perlinViewer.getId(), std::move(perlinViewer));
-
-    auto terrain = MyGameObject::createGameObject();
-    std::shared_ptr<MyModel> terrainModel = TerrainGenerator::generate(device, heightMap, resolution, 1, 15);
-    terrain.model = terrainModel;
-    terrain.transform.translation = {0.f, 0.5f, 0.f};
-    terrain.transform.scale = {1.f, 8.f, 1.f};
-    // terrain.texture = grassTexture;
-    gameObjects.emplace(terrain.getId(), std::move(terrain));
 
     auto sea = MyGameObject::createGameObject();
     sea.model = quadModel;
