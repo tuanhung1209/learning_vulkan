@@ -30,6 +30,7 @@ struct GlobalUbo {
     alignas(16) glm::vec4 horizonColor{0.05f, 0.3f, 1.f, 1.f};
     glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};
     glm::vec4 sunDirection{0.f, -1.f, 0.f, 0.f};
+    float time{0.f};
 };
 
 struct FrameInfo {

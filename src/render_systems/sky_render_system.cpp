@@ -15,14 +15,43 @@ SkyRenderSystem::SkyRenderSystem(Device &device, VkRenderPass renderPass,
                                  VkDescriptorSetLayout globalSetLayout)
     : myDevice{device} {
     skyModel = MyModel::createModelFromFile(myDevice, "assets/models/sphere.obj");
+    creatSkyTexturePoolAndSetLayout();
     createPipelineLayout(globalSetLayout);
     createPipeline(renderPass);
+}
+
+void SkyRenderSystem::creatSkyTexturePoolAndSetLayout() {
+    skyTexturePool = MyDescriptorPool::Builder(myDevice)
+                         .setMaxSets(1)
+                         .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+                         .build();
+
+    skyTextureSetLayout =
+        MyDescriptorSetLayout::Builder(myDevice)
+            .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .build();
+
+    skyTexture = std::make_shared<MyTexture>(myDevice, "assets/textures/sky_texture.png");
+    skyDescriptorSet = createSkyDescriptorSet(*skyTexture);
+}
+
+VkDescriptorSet SkyRenderSystem ::createSkyDescriptorSet(MyTexture &tex) {
+    VkDescriptorImageInfo imageInfo{};
+    imageInfo.sampler = tex.getTextureSampler();
+    imageInfo.imageView = tex.getTextureImageView();
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkDescriptorSet descriptorSet;
+    MyDescriptorWriter(*skyTextureSetLayout, *skyTexturePool).writeImage(0, &imageInfo).build(descriptorSet);
+
+    return descriptorSet;
 }
 
 SkyRenderSystem::~SkyRenderSystem() { vkDestroyPipelineLayout(myDevice.device(), pipelineLayout, nullptr); }
 
 void SkyRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
-    std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalSetLayout};
+    std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalSetLayout,
+                                                            skyTextureSetLayout->getDescriptorSetLayout()};
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -43,7 +72,7 @@ void SkyRenderSystem::createPipeline(VkRenderPass renderPass) {
 
     pipelineConfig.depthStencilInfo.depthWriteEnable = VK_FALSE;
     pipelineConfig.depthStencilInfo.depthTestEnable = VK_FALSE;
-    pipelineConfig.rasterizationInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+    pipelineConfig.rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 
     pipelineConfig.renderPass = renderPass;
     pipelineConfig.pipelineLayout = pipelineLayout;
@@ -56,6 +85,9 @@ void SkyRenderSystem::renderSky(FrameInfo &frameInfo) {
 
     vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1,
                             &frameInfo.globalDescriptorSet, 0, nullptr);
+
+    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1,
+                            &skyDescriptorSet, 0, nullptr);
 
     skyModel->bind(frameInfo.commandBuffer);
     skyModel->draw(frameInfo.commandBuffer);

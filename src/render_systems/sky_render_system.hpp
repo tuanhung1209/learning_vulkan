@@ -5,6 +5,7 @@
 #include "render_core/my_frame_info.hpp"
 #include "render_core/my_model.hpp"
 #include "vulkan_core/device.hpp"
+#include "vulkan_core/my_descriptors.hpp"
 #include "vulkan_core/pipeline.hpp"
 
 #include <memory>
@@ -24,8 +25,15 @@ class SkyRenderSystem {
   private:
     void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
     void createPipeline(VkRenderPass renderPass);
+    void creatSkyTexturePoolAndSetLayout();
+    VkDescriptorSet createSkyDescriptorSet(MyTexture &tex);
 
+    std::shared_ptr<MyTexture> skyTexture;
     Device &myDevice;
+
+    std::unique_ptr<MyDescriptorPool> skyTexturePool;
+    std::unique_ptr<MyDescriptorSetLayout> skyTextureSetLayout;
+    VkDescriptorSet skyDescriptorSet;
 
     std::shared_ptr<MyModel> skyModel;
     std::unique_ptr<PipeLine> myPipeLine;

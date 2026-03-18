@@ -21,6 +21,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 horizonColor;
     vec4 skyColor;
     vec4 sunDirection;
+    float time;
 } ubo;
 
 layout(push_constant) uniform Push {

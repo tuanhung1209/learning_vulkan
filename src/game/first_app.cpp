@@ -86,6 +86,7 @@ void FirstApp::run() {
 
     PhysicsWorld physicsWorld;
     auto currentTime = std::chrono::high_resolution_clock::now();
+    float totalTime = 0.f;
 
     bool shouldRegenerateTerrain = false;
 
@@ -96,6 +97,7 @@ void FirstApp::run() {
         auto frameTime =
             std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
         currentTime = newTime;
+        totalTime += frameTime;
 
         if (shouldRegenerateTerrain) {
             vkDeviceWaitIdle(device.device());
@@ -123,9 +125,7 @@ void FirstApp::run() {
             ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
             ImGui::End();
 
-            if (terrainGen.drawGui()) {
-                shouldRegenerateTerrain = true;
-            }
+            if (terrainGen.drawGui()) { shouldRegenerateTerrain = true; }
 
             // line below to update descriptorInfo
             GlobalUbo ubo{};
@@ -133,13 +133,14 @@ void FirstApp::run() {
             ubo.view = camera.getView();
             ubo.inverseView = camera.getInverseView();
 
-            ubo.fogColor = glm::vec4(0.3f, 0.2f, 0.15f, 1.0f);
+            ubo.horizonColor = {1.f, 1.f, 1.f, 1.f};
+            ubo.skyColor = {0.02f, 0.02f, 0.05f, 1.f};
+
+            ubo.fogColor = ubo.horizonColor;
             ubo.fogNear = 300.f;
             ubo.fogFar = 1500.f;
-
-            ubo.horizonColor = {1.f, 0.4f, 0.1f, 1.f};
-            ubo.skyColor = {0.02f, 0.02f, 0.05f, 1.f};
             ubo.sunDirection = glm::vec4(glm::normalize(glm::vec3(1.f, -0.22f, 0.5f)), 0.f);
+            ubo.time = totalTime;
 
             PointLightSystem.update(frameInfo, ubo);
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
@@ -165,7 +166,6 @@ void FirstApp::run() {
 void FirstApp::loadGameObjects() {
 
     auto grassTexture = std::make_shared<MyTexture>(device, "assets/textures/grass.png");
-    auto grassTexture2 = std::make_shared<MyTexture>(device, "assets/textures/grass_solid.png");
     auto waterTexture = std::make_shared<MyTexture>(device, "assets/textures/water.jpg");
 
     std::shared_ptr<MyModel> cubeModel =
