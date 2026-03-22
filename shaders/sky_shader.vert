@@ -23,11 +23,15 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 fogColor;
     float fogNear;
     float fogFar;
+} ubo;
+
+layout(set = 2, binding = 0) uniform SkyUbo{
     vec4 horizonColor;
     vec4 skyColor;
+    vec4 skyTextureColor;
     vec4 sunDirection;
     float time;
-} ubo;
+} skyUbo;
 
 void main(){
     mat4 viewNoTranslation = mat4(mat3(ubo.view));

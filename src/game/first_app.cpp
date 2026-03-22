@@ -64,6 +64,7 @@ void FirstApp::run() {
                                       globalSetLayout->getDescriptorSetLayout()};
     SkyRenderSystem skyRenderSystem{device, myRenderer.getSwapChainRenderPass(),
                                     globalSetLayout->getDescriptorSetLayout()};
+    SkyUbo skyUbo{};
     ImGuiWrapper guiRenderSystem{device, window, myRenderer.getSwapChainRenderPass()};
 
     TerrainGenerator terrainGen{device};
@@ -71,7 +72,6 @@ void FirstApp::run() {
     terrainGen.createTerrain(gameObjects, quadModel);
 
     MyCamera camera{};
-
     camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
 
     // Initialize Bullet Handler
@@ -97,7 +97,7 @@ void FirstApp::run() {
         auto frameTime =
             std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
         currentTime = newTime;
-        totalTime += frameTime;
+        totalTime += 0.001;
 
         if (shouldRegenerateTerrain) {
             vkDeviceWaitIdle(device.device());
@@ -129,18 +129,15 @@ void FirstApp::run() {
 
             // line below to update descriptorInfo
             GlobalUbo ubo{};
+
             ubo.projection = camera.getProjectionMatrix();
             ubo.view = camera.getView();
             ubo.inverseView = camera.getInverseView();
 
-            ubo.horizonColor = {1.f, 1.f, 1.f, 1.f};
-            ubo.skyColor = {0.02f, 0.02f, 0.05f, 1.f};
+            ubo.fogColor = skyUbo.horizonColor;
 
-            ubo.fogColor = ubo.horizonColor;
-            ubo.fogNear = 300.f;
-            ubo.fogFar = 1500.f;
-            ubo.sunDirection = glm::vec4(glm::normalize(glm::vec3(1.f, -0.22f, 0.5f)), 0.f);
-            ubo.time = totalTime;
+            skyRenderSystem.updateUbo(frameInfo, skyUbo);
+            skyUbo.time = totalTime;
 
             PointLightSystem.update(frameInfo, ubo);
             uboBuffers[frameIndex]->writeToBuffer(&ubo);

@@ -20,13 +20,17 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 fogColor;
     float fogNear;
     float fogFar;
-    vec4 horizonColor;
-    vec4 skyColor;
-    vec4 sunDirection;
-    float time;
 } ubo;
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
+
+layout(set = 2, binding = 0) uniform SkyUbo{
+    vec4 horizonColor;
+    vec4 skyColor;
+    vec4 skyTextureColor;
+    vec4 sunDirection;
+    float time;
+} skyUbo;
 
 float algebraicSigmoid(float x, float a, float b, float c) {
     return (a * x - b) / sqrt(c + pow(a * x - b, 2.0));
@@ -37,20 +41,24 @@ float horizonCurve(float x, float blendFactor, float blendHeight) {
 }
 
 void main(){
-    float speed = 0.002;
-    vec2 uv = fragTexCoord;
-    uv.x = fract(uv.x + ubo.time * speed);
-    vec3 texColor = texture(texSampler, uv).rgb;
+    // moving cloud
+    vec2 uv1 = fragTexCoord + vec2(skyUbo.time * 0.003, skyUbo.time * 0.001);
+    vec2 uv2 = fragTexCoord + vec2(-skyUbo.time * 0.002, skyUbo.time * 0.0015);
+    uv1.x = fract(uv1.x);
+    uv2.x = fract(uv2.x);
+    vec3 sample1 = texture(texSampler, uv1).rgb;
+    vec3 sample2 = texture(texSampler, uv2).rgb;
+    vec3 texColor = mix(sample1, sample2, 0.5);
 
     vec3 dir = normalize(fragDir);
     float texY = -dir.y * 0.5 + 0.5;
     float horizonHandle = horizonCurve(texY, 0.005, 0.57);
 
     // sky gradient
-    vec3 finalColor = mix(ubo.horizonColor.rgb, ubo.skyColor.rgb, horizonHandle);
+    vec3 skyColor = mix(skyUbo.horizonColor.rgb, skyUbo.skyColor.rgb, horizonHandle);
 
     // sun
-    vec3 sunDir = normalize(ubo.sunDirection.xyz);
+    vec3 sunDir = normalize(skyUbo.sunDirection.xyz);
     float sunAngle = dot(dir, sunDir);
 
     // hard sun disc
@@ -65,13 +73,12 @@ void main(){
     float sunHaze = pow(max(sunAngle, 0.0), 8.0);
     vec3 hazeColor = vec3(1.0, 1.0, 1.0);
 
-    finalColor += sunDisc * sunColor * 2.0;
-    finalColor += sunGlow * glowColor * 0.5;
-    finalColor += sunHaze * hazeColor * 0.15;
-    finalColor *= texColor;
+    skyColor += sunDisc * sunColor * 2.0;
+    skyColor += sunGlow * glowColor * 0.5;
+    skyColor += sunHaze * hazeColor * 0.15;
+    skyColor *= texColor;
 
-    // pink sky
-    // finalColor *= vec3(0.941, 0.322, 0.875)
+    skyColor *= skyUbo.skyTextureColor.rgb;
 
-    outColor = vec4(finalColor, 1.0);
+    outColor = vec4(skyColor, 1.0);
 }

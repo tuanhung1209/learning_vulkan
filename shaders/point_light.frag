@@ -18,17 +18,13 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 fogColor;
     float fogNear;
     float fogFar;
-    vec4 horizonColor;
-    vec4 skyColor;
-    vec4 sunDirection;
-    float time;
 } ubo;
 
 layout(push_constant) uniform Push {
     vec4 position;
     vec4 color;
     float radius;
-} push; 
+} push;
 
 void main(){
     float dis = sqrt(dot(fragOffset, fragOffset));

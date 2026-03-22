@@ -22,10 +22,6 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 fogColor;
     float fogNear;
     float fogFar;
-    vec4 horizonColor;
-    vec4 skyColor;
-    vec4 sunDirection;
-    float time;
 } ubo;
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
@@ -67,7 +63,6 @@ void main() {
 
     vec3 litColor  = diffuseLight * texColor * fragColor + specularLight * fragColor;
 
-    // add fog
     float dist = length(cameraPosWorld - fragPosWorld);
     float fogFactor = clamp((ubo.fogFar - dist) / (ubo.fogFar - ubo.fogNear), 0.0, 1.0);
     vec3 finalColor = mix(ubo.fogColor.rgb, litColor, fogFactor);

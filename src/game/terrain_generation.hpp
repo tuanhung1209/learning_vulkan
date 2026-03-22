@@ -13,7 +13,7 @@ namespace my {
 
 class TerrainGenerator {
   public:
-    struct Config {
+    struct TerrainConfig {
         int seed = 2;
         float noiseScale = 250.0f;
         int octaves = 10;
@@ -35,7 +35,7 @@ class TerrainGenerator {
 
     bool drawGui();
 
-    Config config{};
+    TerrainConfig config{};
 
   private:
     void generateHeightMap(std::vector<float> &heightMap, std::vector<uint8_t> &noisePixels);

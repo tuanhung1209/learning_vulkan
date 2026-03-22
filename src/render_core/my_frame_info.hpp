@@ -22,15 +22,17 @@ struct GlobalUbo {
     glm::vec4 ambientLightColor{1.f, 1.f, 1.f, .02f};
     PointLight pointLights[MAX_LIGHT];
     int numLights;
-
     alignas(16) glm::vec4 fogColor{0.5f, 0.6f, 0.7f, 1.0f};
-    float fogNear{10.f};
-    float fogFar{100.f};
+    float fogNear{300.f};
+    float fogFar{1500.f};
+};
 
+struct SkyUbo {
     alignas(16) glm::vec4 horizonColor{0.05f, 0.3f, 1.f, 1.f};
     glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};
-    glm::vec4 sunDirection{0.f, -1.f, 0.f, 0.f};
-    float time{0.f};
+    glm::vec4 skyTextureColor{0.941f, 0.322f, 0.875f, 1.0f};
+    glm::vec4 sunDirection{1.f, 0.f, 0.5f, 0.f};
+    float time{0.01f};
 };
 
 struct FrameInfo {
