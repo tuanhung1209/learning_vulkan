@@ -5,10 +5,10 @@
 #include <vector>
 
 namespace my{
-struct PipelineConfigInfo {
-	PipelineConfigInfo() = default;
-	PipelineConfigInfo(const PipelineConfigInfo&) = delete;
-	PipelineConfigInfo& operator=(const PipelineConfigInfo&) = delete;
+struct GraphicPipelineConfigInfo {
+	GraphicPipelineConfigInfo() = default;
+	GraphicPipelineConfigInfo(const GraphicPipelineConfigInfo&) = delete;
+	GraphicPipelineConfigInfo& operator=(const GraphicPipelineConfigInfo&) = delete;
 
 	std::vector<VkVertexInputBindingDescription> bindingDescription{};
 	std::vector<VkVertexInputAttributeDescription> attributeDescription{};
@@ -26,28 +26,27 @@ struct PipelineConfigInfo {
 	uint32_t subpass = 0;
 };
 
-class PipeLine
+class GraphicPipeline
 {
 public:
-    PipeLine(Device& device,const std::string& vertFilepath, const std::string& fragFilepath, const PipelineConfigInfo& configInfo);
-    ~PipeLine();
+    GraphicPipeline(Device& device,const std::string& vertFilepath, const std::string& fragFilepath, const GraphicPipelineConfigInfo& configInfo);
+    ~GraphicPipeline();
 
-    PipeLine(const PipeLine&) = delete;
-    PipeLine& operator = (const PipeLine&) = delete;
+    GraphicPipeline(const GraphicPipeline&) = delete;
+    GraphicPipeline& operator = (const GraphicPipeline&) = delete;
 
-    // return a PipelineConfigInfo but not passing in PipeLine init how can it take the argument ?
-    static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo);
+    static void defaultPipelineConfigInfo(GraphicPipelineConfigInfo& configInfo);
 
     void bind(VkCommandBuffer commandBuffer);
 private:
 	static std::vector<char> readFile(const std::string &filepath);
 
-	void createGraphicsPipeLine(const std::string &vertFilepath, const std::string &fragFilepath, const PipelineConfigInfo &configInfo);
+	void createGraphicsPipeline(const std::string &vertFilepath, const std::string &fragFilepath, const GraphicPipelineConfigInfo &configInfo);
 
 	void createShaderModule(const std::vector<char> &code, VkShaderModule *shaderModule);
 
     Device &device;
-    VkPipeline graphicsPipeLine;
+    VkPipeline graphicsPipeline;
     VkShaderModule vertShaderModule;
     VkShaderModule fragShaderModule;
 };

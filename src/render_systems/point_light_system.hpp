@@ -4,7 +4,7 @@
 #include "render_core/my_camera.hpp"
 #include "render_core/my_frame_info.hpp"
 #include "vulkan_core/device.hpp"
-#include "vulkan_core/pipeline.hpp"
+#include "vulkan_core/graphic_pipeline.hpp"
 
 #include <memory>
 
@@ -22,13 +22,13 @@ class PointLightSystem {
     void renderLight(FrameInfo &frameInfo);
 
   private:
-    void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
-    void createPipeline(VkRenderPass renderPass);
+    void createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout);
+    void createGraphicPipeline(VkRenderPass renderPass);
 
     Device &myDevice;
 
-    std::unique_ptr<PipeLine> myPipeLine;
-    VkPipelineLayout pipelineLayout;
+    std::unique_ptr<GraphicPipeline> myGraphicPipeline;
+    VkPipelineLayout graphicPipelineLayout;
 };
 
 } // namespace my

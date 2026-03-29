@@ -21,10 +21,10 @@ SkyRenderSystem::SkyRenderSystem(Device &device, VkRenderPass renderPass,
     skyModel = MyModel::createModelFromFile(myDevice, "assets/models/sphere.obj");
     createSkyTexturePoolAndSetLayout();
     createSkyUboPoolAndSetLayout();
-    createPipelineLayout(globalSetLayout);
-    createPipeline(renderPass);
+    createGraphicPipelineLayout(globalSetLayout);
+    createGraphicPipeline(renderPass);
 }
-SkyRenderSystem::~SkyRenderSystem() { vkDestroyPipelineLayout(myDevice.device(), pipelineLayout, nullptr); }
+SkyRenderSystem::~SkyRenderSystem() { vkDestroyPipelineLayout(myDevice.device(), graphicPipelineLayout, nullptr); }
 
 void SkyRenderSystem::createSkyUboPoolAndSetLayout() {
     skyUboBuffers.resize(SwapChain::MAX_FRAMES_IN_FLIGHT);
@@ -80,7 +80,7 @@ VkDescriptorSet SkyRenderSystem ::createSkyDescriptorSet(MyTexture &tex) {
     return descriptorSet;
 }
 
-void SkyRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
+void SkyRenderSystem::createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalSetLayout,
                                                             skyTextureSetLayout->getDescriptorSetLayout(),
                                                             skyUboSetLayout->getDescriptorSetLayout()};
@@ -90,25 +90,25 @@ void SkyRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout
     pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 
-    if (vkCreatePipelineLayout(myDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) !=
+    if (vkCreatePipelineLayout(myDevice.device(), &pipelineLayoutInfo, nullptr, &graphicPipelineLayout) !=
         VK_SUCCESS) {
         throw std::runtime_error("can not create pipelinelayout");
     }
 }
 
-void SkyRenderSystem::createPipeline(VkRenderPass renderPass) {
-    assert(pipelineLayout != nullptr && "cannot create pipeline before pipeline layout");
+void SkyRenderSystem::createGraphicPipeline(VkRenderPass renderPass) {
+    assert(graphicPipelineLayout != nullptr && "cannot create pipeline before pipeline layout");
 
-    PipelineConfigInfo pipelineConfig{};
-    PipeLine::defaultPipelineConfigInfo(pipelineConfig);
+    GraphicPipelineConfigInfo pipelineConfig{};
+    GraphicPipeline::defaultPipelineConfigInfo(pipelineConfig);
 
     pipelineConfig.depthStencilInfo.depthWriteEnable = VK_FALSE;
     pipelineConfig.depthStencilInfo.depthTestEnable = VK_FALSE;
     pipelineConfig.rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 
     pipelineConfig.renderPass = renderPass;
-    pipelineConfig.pipelineLayout = pipelineLayout;
-    myPipeLine = std::make_unique<PipeLine>(myDevice, "shaders/sky_shader.vert.spv",
+    pipelineConfig.pipelineLayout = graphicPipelineLayout;
+    myGraphicPipeline = std::make_unique<GraphicPipeline>(myDevice, "shaders/sky_shader.vert.spv",
                                             "shaders/sky_shader.frag.spv", pipelineConfig);
 }
 
@@ -125,15 +125,15 @@ void SkyRenderSystem::updateUbo(FrameInfo &frameInfo, SkyUbo &skyUbo) {
 }
 
 void SkyRenderSystem::renderSky(FrameInfo &frameInfo) {
-    myPipeLine->bind(frameInfo.commandBuffer);
+    myGraphicPipeline->bind(frameInfo.commandBuffer);
 
-    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1,
+    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout, 0, 1,
                             &frameInfo.globalDescriptorSet, 0, nullptr);
 
-    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1,
+    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout, 1, 1,
                             &skyTextureDescriptorSet, 0, nullptr);
 
-    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1,
+    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout, 2, 1,
                             &skyUboDescriptorSet[frameInfo.frameIndex], 0, nullptr);
 
     skyModel->bind(frameInfo.commandBuffer);

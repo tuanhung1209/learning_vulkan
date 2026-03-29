@@ -18,12 +18,12 @@ SimpleRenderSystem::SimpleRenderSystem(Device &device, VkRenderPass renderPass,
                                        VkDescriptorSetLayout globalSetLayout)
     : myDevice{device} {
     createTexturePoolAndSetLayout();
-    createPipelineLayout(globalSetLayout);
-    createPipeline(renderPass);
+    createGraphicPipelineLayout(globalSetLayout);
+    createGraphicPipeline(renderPass);
 }
 
 SimpleRenderSystem::~SimpleRenderSystem() {
-    vkDestroyPipelineLayout(myDevice.device(), pipelineLayout, nullptr);
+    vkDestroyPipelineLayout(myDevice.device(), graphicPipelineLayout, nullptr);
 }
 
 void SimpleRenderSystem::createTexturePoolAndSetLayout() {
@@ -40,7 +40,7 @@ void SimpleRenderSystem::createTexturePoolAndSetLayout() {
     defaultWhiteTexture = std::make_shared<MyTexture>(myDevice, "assets/textures/white.png");
 }
 
-void SimpleRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
+void SimpleRenderSystem::createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
     VkPushConstantRange pushConstantRange{};
     pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstantRange.offset = 0;
@@ -56,21 +56,21 @@ void SimpleRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLay
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-    if (vkCreatePipelineLayout(myDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) !=
+    if (vkCreatePipelineLayout(myDevice.device(), &pipelineLayoutInfo, nullptr, &graphicPipelineLayout) !=
         VK_SUCCESS) {
         throw std::runtime_error("can not create pipelinelayout");
     }
 }
 
-void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
-    assert(pipelineLayout != nullptr && "cannot create pipeline before pipeline layout");
+void SimpleRenderSystem::createGraphicPipeline(VkRenderPass renderPass) {
+    assert(graphicPipelineLayout != nullptr && "cannot create pipeline before pipeline layout");
 
-    PipelineConfigInfo pipelineConfig{};
-    PipeLine::defaultPipelineConfigInfo(pipelineConfig);
+    GraphicPipelineConfigInfo pipelineConfig{};
+    GraphicPipeline::defaultPipelineConfigInfo(pipelineConfig);
     pipelineConfig.renderPass = renderPass;
-    pipelineConfig.pipelineLayout = pipelineLayout;
-    myPipeLine = std::make_unique<PipeLine>(myDevice, "shaders/simple_shader.vert.spv",
-                                            "shaders/simple_shader.frag.spv", pipelineConfig);
+    pipelineConfig.pipelineLayout = graphicPipelineLayout;
+    myGraphicPipeline = std::make_unique<GraphicPipeline>(myDevice, "shaders/simple_shader.vert.spv",
+                                                   "shaders/simple_shader.frag.spv", pipelineConfig);
 }
 
 VkDescriptorSet SimpleRenderSystem::getOrCreateTextureDescriptorSet(MyTexture &tex) {
@@ -91,9 +91,9 @@ VkDescriptorSet SimpleRenderSystem::getOrCreateTextureDescriptorSet(MyTexture &t
 }
 
 void SimpleRenderSystem::renderGameObjects(FrameInfo &frameInfo) {
-    myPipeLine->bind(frameInfo.commandBuffer);
+    myGraphicPipeline->bind(frameInfo.commandBuffer);
 
-    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1,
+    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout, 0, 1,
                             &frameInfo.globalDescriptorSet, 0, nullptr);
 
     // can split into multiple vector to have object with different component/attribute
@@ -104,14 +104,14 @@ void SimpleRenderSystem::renderGameObjects(FrameInfo &frameInfo) {
 
         MyTexture &tex = obj.texture ? *obj.texture : *defaultWhiteTexture;
         VkDescriptorSet texDescriptorSet = getOrCreateTextureDescriptorSet(tex);
-        vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1,
+        vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout, 1,
                                 1, &texDescriptorSet, 0, nullptr);
 
         SimplePushConstantData push{};
         push.modelMatrix = obj.transform.mat4();
         push.normalMatrix = obj.transform.normalMatrix();
 
-        vkCmdPushConstants(frameInfo.commandBuffer, pipelineLayout,
+        vkCmdPushConstants(frameInfo.commandBuffer, graphicPipelineLayout,
                            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
                            sizeof(SimplePushConstantData), &push);
 

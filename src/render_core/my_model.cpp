@@ -111,17 +111,13 @@ std::vector<VkVertexInputBindingDescription> MyModel::Vertex::getBindingDescript
     bindingDescription[0].stride = sizeof(Vertex);
     return bindingDescription;
 }
+
 std::vector<VkVertexInputAttributeDescription> MyModel::Vertex::getAttributeDescriptions() {
     std::vector<VkVertexInputAttributeDescription> attributeDescription{};
-
-    // binding is like a number of vector<Vertex>
-    // location is the location use in the vertex shader
-
     attributeDescription.push_back({0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position)});
     attributeDescription.push_back({1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)});
     attributeDescription.push_back({2, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)});
     attributeDescription.push_back({3, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv)});
-
     return attributeDescription;
 }
 

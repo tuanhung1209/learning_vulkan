@@ -6,7 +6,7 @@
 #include "render_core/my_model.hpp"
 #include "vulkan_core/device.hpp"
 #include "vulkan_core/my_descriptors.hpp"
-#include "vulkan_core/pipeline.hpp"
+#include "vulkan_core/graphic_pipeline.hpp"
 #include "vulkan_core/swap_chain.hpp"
 
 #include <memory>
@@ -25,8 +25,8 @@ class SkyRenderSystem {
     void updateUbo(FrameInfo &frameInfo, SkyUbo &skyUbo);
 
   private:
-    void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
-    void createPipeline(VkRenderPass renderPass);
+    void createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout);
+    void createGraphicPipeline(VkRenderPass renderPass);
     void createSkyTexturePoolAndSetLayout();
     void createSkyUboPoolAndSetLayout();
     VkDescriptorSet createSkyDescriptorSet(MyTexture &tex);
@@ -44,8 +44,8 @@ class SkyRenderSystem {
     std::vector<VkDescriptorSet> skyUboDescriptorSet;
 
     std::shared_ptr<MyModel> skyModel;
-    std::unique_ptr<PipeLine> myPipeLine;
-    VkPipelineLayout pipelineLayout;
+    std::unique_ptr<GraphicPipeline> myGraphicPipeline;
+    VkPipelineLayout graphicPipelineLayout;
 };
 
 } // namespace my

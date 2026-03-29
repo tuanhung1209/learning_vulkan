@@ -1,30 +1,30 @@
-#include "vulkan_core/pipeline.hpp"
+#include "vulkan_core/graphic_pipeline.hpp"
 #include "render_core/my_model.hpp"
 
-#include <fstream>
-#include <stdexcept>
-#include <iostream>
 #include <cassert>
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
 
-namespace my{
-PipeLine::PipeLine(Device &device, const std::string &vertFilepath, const std::string &fragFilepath, const PipelineConfigInfo &configInfo) : device{device}{
-    createGraphicsPipeLine(vertFilepath, fragFilepath, configInfo);
+namespace my {
+GraphicPipeline::GraphicPipeline(Device &device, const std::string &vertFilepath,
+                                 const std::string &fragFilepath, const GraphicPipelineConfigInfo &configInfo)
+    : device{device} {
+    createGraphicsPipeline(vertFilepath, fragFilepath, configInfo);
 }
 
-PipeLine::~PipeLine(){
+GraphicPipeline::~GraphicPipeline() {
     vkDestroyShaderModule(device.device(), vertShaderModule, nullptr);
     vkDestroyShaderModule(device.device(), fragShaderModule, nullptr);
-    vkDestroyPipeline(device.device(), graphicsPipeLine, nullptr);
+    vkDestroyPipeline(device.device(), graphicsPipeline, nullptr);
 }
 
 // a function that read frag file and vertex file
-std::vector<char> PipeLine::readFile(const std::string& filepath){
+std::vector<char> GraphicPipeline::readFile(const std::string &filepath) {
 
     std::ifstream file(filepath, std::ios::ate | std::ios::binary);
 
-    if(!file.is_open()){
-        throw std::runtime_error("faid to open file: " + filepath);
-    }
+    if (!file.is_open()) { throw std::runtime_error("faid to open file: " + filepath); }
 
     size_t fileSize = static_cast<size_t>(file.tellg());
     std::vector<char> buffer(fileSize);
@@ -36,8 +36,9 @@ std::vector<char> PipeLine::readFile(const std::string& filepath){
     return buffer;
 }
 
-//output formated fragment and vertex file
-void PipeLine::createGraphicsPipeLine(const std::string &vertFilepath, const std::string &fragFilepath, const PipelineConfigInfo &configInfo){
+// output formated fragment and vertex file
+void GraphicPipeline::createGraphicsPipeline(const std::string &vertFilepath, const std::string &fragFilepath,
+                                             const GraphicPipelineConfigInfo &configInfo) {
 
     assert(configInfo.pipelineLayout != VK_NULL_HANDLE && "no pipelinelayout have been provied");
     assert(configInfo.renderPass != VK_NULL_HANDLE && "no renderpass have been provied");
@@ -65,8 +66,8 @@ void PipeLine::createGraphicsPipeLine(const std::string &vertFilepath, const std
     shaderStage[1].pNext = nullptr;
     shaderStage[1].pSpecializationInfo = nullptr;
 
-    auto& bindingDecription = configInfo.bindingDescription; 
-    auto& attributeDecription = configInfo.attributeDescription;
+    auto &bindingDecription = configInfo.bindingDescription;
+    auto &attributeDecription = configInfo.attributeDescription;
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -85,7 +86,7 @@ void PipeLine::createGraphicsPipeLine(const std::string &vertFilepath, const std
     pipelineInfo.pRasterizationState = &configInfo.rasterizationInfo;
     pipelineInfo.pMultisampleState = &configInfo.multisampleInfo;
 
-    pipelineInfo.pColorBlendState = &configInfo.colorBlendInfo; 
+    pipelineInfo.pColorBlendState = &configInfo.colorBlendInfo;
     pipelineInfo.pDepthStencilState = &configInfo.depthStencilInfo;
     pipelineInfo.pDynamicState = &configInfo.dynamicStateInfo;
 
@@ -95,29 +96,28 @@ void PipeLine::createGraphicsPipeLine(const std::string &vertFilepath, const std
 
     pipelineInfo.basePipelineIndex = -1;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-    if (vkCreateGraphicsPipelines(device.device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeLine) != VK_SUCCESS)
-    {
-        throw std::runtime_error("unable to create pipeline");
+    if (vkCreateGraphicsPipelines(device.device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr,
+                                  &graphicsPipeline) != VK_SUCCESS) {
+        throw std::runtime_error("unable to create graphic pipeline");
     }
 }
 
-
-void PipeLine::createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule){
+void GraphicPipeline::createShaderModule(const std::vector<char> &code, VkShaderModule *shaderModule) {
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+    createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
 
-    if (vkCreateShaderModule(device.device(), &createInfo, nullptr, shaderModule) != VK_SUCCESS){
+    if (vkCreateShaderModule(device.device(), &createInfo, nullptr, shaderModule) != VK_SUCCESS) {
         throw std::runtime_error("fail to create shader");
     }
 }
 
-void PipeLine::bind(VkCommandBuffer commandBuffer){
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeLine);
+void GraphicPipeline::bind(VkCommandBuffer commandBuffer) {
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 }
 
-void PipeLine::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo){
+void GraphicPipeline::defaultPipelineConfigInfo(GraphicPipelineConfigInfo &configInfo) {
     configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     // how the vertex are connected
     configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -129,7 +129,7 @@ void PipeLine::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo){
     configInfo.viewportInfo.pViewports = nullptr;
     configInfo.viewportInfo.scissorCount = 1;
     configInfo.viewportInfo.pScissors = nullptr;
-    //break up geometry info into fragments for each pixel or trangle overlap
+    // break up geometry info into fragments for each pixel or trangle overlap
     configInfo.rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     configInfo.rasterizationInfo.depthClampEnable = VK_FALSE;
     configInfo.rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
@@ -152,9 +152,8 @@ void PipeLine::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo){
     configInfo.multisampleInfo.alphaToOneEnable = VK_FALSE;      // Optional
 
     // use for color blend
-    configInfo.colorBlendAttachment.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
-        VK_COLOR_COMPONENT_A_BIT;
+    configInfo.colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                                     VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     configInfo.colorBlendAttachment.blendEnable = VK_FALSE;
     configInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;  // Optional
     configInfo.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
@@ -162,7 +161,7 @@ void PipeLine::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo){
     configInfo.colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;  // Optional
     configInfo.colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
     configInfo.colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;             // Optional
- 
+
     configInfo.colorBlendInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     configInfo.colorBlendInfo.logicOpEnable = VK_FALSE;
     configInfo.colorBlendInfo.logicOp = VK_LOGIC_OP_COPY; // Optional
@@ -189,10 +188,11 @@ void PipeLine::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo){
     configInfo.dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
     configInfo.dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     configInfo.dynamicStateInfo.pDynamicStates = configInfo.dynamicStateEnables.data();
-    configInfo.dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
+    configInfo.dynamicStateInfo.dynamicStateCount =
+        static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
     configInfo.dynamicStateInfo.flags = 0;
 
     configInfo.bindingDescription = MyModel::Vertex::getBindingDescriptions();
     configInfo.attributeDescription = MyModel::Vertex::getAttributeDescriptions();
 }
-}
+} // namespace my

@@ -6,7 +6,7 @@
 #include "render_core/my_texture.hpp"
 #include "vulkan_core/device.hpp"
 #include "vulkan_core/my_descriptors.hpp"
-#include "vulkan_core/pipeline.hpp"
+#include "vulkan_core/graphic_pipeline.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -23,12 +23,12 @@ class SimpleRenderSystem {
 
     void renderGameObjects(FrameInfo &frameInfo);
 
-    VkPipelineLayout getPipelineLayout() const { return pipelineLayout; }
+    VkPipelineLayout getGraphicPipelineLayout() const { return graphicPipelineLayout; }
 
   private:
     void createTexturePoolAndSetLayout();
-    void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
-    void createPipeline(VkRenderPass renderPass);
+    void createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout);
+    void createGraphicPipeline(VkRenderPass renderPass);
     VkDescriptorSet getOrCreateTextureDescriptorSet(MyTexture &tex);
 
     Device &myDevice;
@@ -39,8 +39,8 @@ class SimpleRenderSystem {
     std::unique_ptr<MyDescriptorSetLayout> textureSetLayout;
     std::unordered_map<MyTexture *, VkDescriptorSet> textureDescriptorSets;
 
-    std::unique_ptr<PipeLine> myPipeLine;
-    VkPipelineLayout pipelineLayout;
+    std::unique_ptr<GraphicPipeline> myGraphicPipeline;
+    VkPipelineLayout graphicPipelineLayout;
 };
 
 } // namespace my

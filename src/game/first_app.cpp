@@ -6,6 +6,7 @@
 #include "imgui.h"
 #include "render_core/my_imgui.hpp"
 #include "render_core/my_texture.hpp"
+#include "render_systems/grass_render_system.hpp"
 #include "render_systems/point_light_system.hpp"
 #include "render_systems/simple_render_system.hpp"
 #include "render_systems/sky_render_system.hpp"
@@ -64,6 +65,8 @@ void FirstApp::run() {
                                       globalSetLayout->getDescriptorSetLayout()};
     SkyRenderSystem skyRenderSystem{device, myRenderer.getSwapChainRenderPass(),
                                     globalSetLayout->getDescriptorSetLayout()};
+    GrassRenderSystem grassRenderSystem{device, myRenderer.getSwapChainRenderPass(),
+                                        globalSetLayout->getDescriptorSetLayout()};
     SkyUbo skyUbo{};
     ImGuiWrapper guiRenderSystem{device, window, myRenderer.getSwapChainRenderPass()};
 
@@ -97,7 +100,7 @@ void FirstApp::run() {
         auto frameTime =
             std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
         currentTime = newTime;
-        totalTime += 0.001;
+        totalTime += 0.0001;
 
         if (shouldRegenerateTerrain) {
             vkDeviceWaitIdle(device.device());
@@ -143,12 +146,16 @@ void FirstApp::run() {
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
             uboBuffers[frameIndex]->flush();
 
+            // line below for compute
+            grassRenderSystem.computeGrass(frameInfo);
+
             // line below to render
             myRenderer.beginSwapChainRenderPass(commandBuffer);
             skyRenderSystem.renderSky(frameInfo);
             simpleRenderSystem.renderGameObjects(frameInfo);
 
-            bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getPipelineLayout());
+            grassRenderSystem.renderGrass(frameInfo);
+            bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getGraphicPipelineLayout());
             PointLightSystem.renderLight(frameInfo);
 
             guiRenderSystem.renderGui(frameInfo);

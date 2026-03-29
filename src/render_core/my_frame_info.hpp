@@ -4,11 +4,15 @@
 #include "game/my_game_object.hpp"
 #include "render_core/my_camera.hpp"
 
-#include <vulkan/vulkan.h>
-
 namespace my {
 #define MAX_LIGHT 10
 #define MAX_BULLET 100
+#define MAX_GRASS 1048576
+
+struct GrassTransformData {
+    glm::vec4 translation{};
+    glm::vec2 scale{1.f};
+};
 
 struct PointLight {
     glm::vec4 position{};

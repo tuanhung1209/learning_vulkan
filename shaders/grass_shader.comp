@@ -1,0 +1,28 @@
+#version 450
+
+layout(local_size_x = 256) in;
+
+struct GrassTransformData {
+    vec4 translation;
+    vec2 scale;
+};
+
+layout(std430, set = 0, binding = 0) buffer GrassBuffer {
+    GrassTransformData transforms[];
+};
+
+layout(push_constant) uniform Push {
+    uint bladeCount;
+    uint gridSize;
+} push;
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    if (id >= push.bladeCount) return;
+
+    uint row = id / push.gridSize;
+    uint col = id % push.gridSize;
+
+    transforms[id].translation = vec4(col * 0.5, 0.0, row * 0.5, float(id) * 0.7);
+    transforms[id].scale = vec2(1.0, 1.0);
+}
