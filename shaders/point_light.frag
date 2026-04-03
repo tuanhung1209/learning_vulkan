@@ -18,6 +18,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 fogColor;
     float fogNear;
     float fogFar;
+    float time;
 } ubo;
 
 layout(push_constant) uniform Push {

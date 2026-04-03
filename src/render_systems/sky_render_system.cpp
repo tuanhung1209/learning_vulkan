@@ -118,7 +118,6 @@ void SkyRenderSystem::updateUbo(FrameInfo &frameInfo, SkyUbo &skyUbo) {
     ImGui::ColorPicker4("Sky Color", &skyUbo.skyColor.x);
     ImGui::ColorPicker4("Sky TColor", &skyUbo.skyTextureColor.x);
     ImGui::SliderFloat3("Sun Direction", &skyUbo.sunDirection.x, -1.f, 1.f);
-    ImGui::SliderFloat("Cloud Speed", &skyUbo.time, -1.0f, 1.0f);
     ImGui::End();
     skyUboBuffers[frameInfo.frameIndex]->writeToBuffer(&skyUbo);
     skyUboBuffers[frameInfo.frameIndex]->flush();

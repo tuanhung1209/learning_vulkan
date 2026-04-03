@@ -4,6 +4,7 @@
 #include "game/physics_utils.hpp"
 #include "game/terrain_generation.hpp"
 #include "imgui.h"
+#include "render_core/my_frame_info.hpp"
 #include "render_core/my_imgui.hpp"
 #include "render_core/my_texture.hpp"
 #include "render_systems/grass_render_system.hpp"
@@ -39,7 +40,6 @@ FirstApp::~FirstApp() {}
 
 void FirstApp::run() {
     std::vector<std::unique_ptr<MyBuffer>> uboBuffers(SwapChain::MAX_FRAMES_IN_FLIGHT);
-
     for (int i = 0; i < uboBuffers.size(); i++) {
         uboBuffers[i] =
             std::make_unique<MyBuffer>(device, sizeof(GlobalUbo), 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -67,17 +67,20 @@ void FirstApp::run() {
                                     globalSetLayout->getDescriptorSetLayout()};
     GrassRenderSystem grassRenderSystem{device, myRenderer.getSwapChainRenderPass(),
                                         globalSetLayout->getDescriptorSetLayout()};
-    SkyUbo skyUbo{};
     ImGuiWrapper guiRenderSystem{device, window, myRenderer.getSwapChainRenderPass()};
+
+    SkyUbo skyUbo{};
 
     TerrainGenerator terrainGen{device};
     std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(device, "assets/models/quad.obj");
     terrainGen.createTerrain(gameObjects, quadModel);
 
+    bool shouldRegenerateTerrain = false;
+    grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(), terrainGen.config.heightScale);
+
     MyCamera camera{};
     camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
 
-    // Initialize Bullet Handler
     std::shared_ptr<MyModel> bulletModel = MyModel::createModelFromFile(device, "assets/models/cube.obj");
     BulletHandler bulletHandler{bulletModel};
 
@@ -91,8 +94,6 @@ void FirstApp::run() {
     auto currentTime = std::chrono::high_resolution_clock::now();
     float totalTime = 0.f;
 
-    bool shouldRegenerateTerrain = false;
-
     while (!window.shouldClose()) {
         glfwPollEvents();
 
@@ -100,19 +101,17 @@ void FirstApp::run() {
         auto frameTime =
             std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
         currentTime = newTime;
-        totalTime += 0.0001;
+        totalTime += frameTime;
 
         if (shouldRegenerateTerrain) {
             vkDeviceWaitIdle(device.device());
             terrainGen.regenerate(gameObjects);
+            grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(), terrainGen.config.heightScale);
             shouldRegenerateTerrain = false;
         }
 
-        // Update player input and bullet lifetimes
         mainPlayer.update(window.getWindow(), frameTime, gameObjects, bulletHandler);
         bulletHandler.update(frameTime);
-
-        // Physics: fixed timestep, iterative solver, collision detection + resolution
         physicsWorld.step(gameObjects, bulletHandler.getBullets(), frameTime);
 
         float aspect = myRenderer.getAspectRatio();
@@ -129,6 +128,7 @@ void FirstApp::run() {
             ImGui::End();
 
             if (terrainGen.drawGui()) { shouldRegenerateTerrain = true; }
+            grassRenderSystem.drawGui(terrainGen.config.heightScale);
 
             // line below to update descriptorInfo
             GlobalUbo ubo{};
@@ -138,9 +138,9 @@ void FirstApp::run() {
             ubo.inverseView = camera.getInverseView();
 
             ubo.fogColor = skyUbo.horizonColor;
+            ubo.time = totalTime;
 
             skyRenderSystem.updateUbo(frameInfo, skyUbo);
-            skyUbo.time = totalTime;
 
             PointLightSystem.update(frameInfo, ubo);
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
@@ -153,9 +153,9 @@ void FirstApp::run() {
             myRenderer.beginSwapChainRenderPass(commandBuffer);
             skyRenderSystem.renderSky(frameInfo);
             simpleRenderSystem.renderGameObjects(frameInfo);
+            bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getGraphicPipelineLayout());
 
             grassRenderSystem.renderGrass(frameInfo);
-            bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getGraphicPipelineLayout());
             PointLightSystem.renderLight(frameInfo);
 
             guiRenderSystem.renderGui(frameInfo);

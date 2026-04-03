@@ -10,14 +10,10 @@
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 #include <vulkan/vulkan_core.h>
 
 namespace my {
-
-struct GrassComputePush {
-    uint32_t bladeCount{2156};
-    uint32_t gridWidth{512};
-};
 
 class GrassRenderSystem {
   public:
@@ -30,8 +26,14 @@ class GrassRenderSystem {
     void computeGrass(FrameInfo &frameInfo);
     void renderGrass(FrameInfo &frameInfo);
 
+    void drawGui(float terrainHeightScale);
+    void updateHeightMap(const std::vector<float> &heightMap, float heightScale);
+
   private:
-    void createGrassComputePoolAndSetLayout();
+    void createComputePoolAndSetLayout();
+    void createGrassComputeBuffer();
+    void createHeightComputeBuffer();
+
     void createComputePipelineLayout();
     void createComputePipeline();
 
@@ -42,6 +44,7 @@ class GrassRenderSystem {
     std::unique_ptr<MyDescriptorSetLayout> grassComputeSetLayout;
     std::vector<VkDescriptorSet> grassComputeDescriptorSet;
     std::vector<std::unique_ptr<MyBuffer>> grassComputeBuffers;
+    std::vector<std::unique_ptr<MyBuffer>> heightComputeBuffers;
 
     std::unique_ptr<ComputePipeline> myComputePipeline;
     VkPipelineLayout computePipelineLayout;

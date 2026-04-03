@@ -12,7 +12,7 @@ TerrainGenerator::TerrainGenerator(Device &device) : myDevice{device} {}
 void TerrainGenerator::createTerrain(MyGameObject::Map &gameObjects, std::shared_ptr<MyModel> quadModel) {
     int res = config.resolution;
     std::vector<uint8_t> noisePixels(res * res * 4);
-    std::vector<float> heightMap(res * res);
+    heightMap.resize(res * res);
     generateHeightMap(heightMap, noisePixels);
 
     auto perlinViewer = MyGameObject::createGameObject();
@@ -34,7 +34,7 @@ void TerrainGenerator::createTerrain(MyGameObject::Map &gameObjects, std::shared
 void TerrainGenerator::regenerate(MyGameObject::Map &gameObjects) {
     int res = config.resolution;
     std::vector<uint8_t> noisePixels(res * res * 4);
-    std::vector<float> heightMap(res * res);
+    heightMap.resize(res * res);
     generateHeightMap(heightMap, noisePixels);
 
     gameObjects.at(terrainId).model = generateMesh(heightMap, res, 1, config.heightScale);
@@ -103,6 +103,7 @@ std::unique_ptr<MyModel> TerrainGenerator::generateMesh(const std::vector<float>
         minH = glm::min(minH, heightMap[i]);
         maxH = glm::max(maxH, heightMap[i]);
     }
+
     float hRange = maxH - minH;
     if (hRange == 0.0f) hRange = 1.0f;
 

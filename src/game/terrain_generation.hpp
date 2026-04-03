@@ -35,6 +35,8 @@ class TerrainGenerator {
 
     bool drawGui();
 
+    const std::vector<float> &getHeightMap() const { return heightMap; }
+
     TerrainConfig config{};
 
   private:
@@ -42,6 +44,8 @@ class TerrainGenerator {
     void addIslandProperty(std::vector<float> &heightMap, int gridSize);
     std::unique_ptr<MyModel> generateMesh(const std::vector<float> &heightMap, int gridSize, float cellSize,
                                           float heightScale);
+
+    std::vector<float> heightMap;
 
     Device &myDevice;
     MyGameObject::id_t terrainId{};

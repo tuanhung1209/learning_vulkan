@@ -22,6 +22,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 fogColor;
     float fogNear;
     float fogFar;
+    float time;
 } ubo;
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler;

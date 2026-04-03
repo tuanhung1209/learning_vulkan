@@ -20,6 +20,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 fogColor;
     float fogNear;
     float fogFar;
+    float time;
 } ubo;
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
@@ -29,7 +30,6 @@ layout(set = 2, binding = 0) uniform SkyUbo{
     vec4 skyColor;
     vec4 skyTextureColor;
     vec4 sunDirection;
-    float time;
 } skyUbo;
 
 float algebraicSigmoid(float x, float a, float b, float c) {
@@ -42,8 +42,8 @@ float horizonCurve(float x, float blendFactor, float blendHeight) {
 
 void main(){
     // moving cloud
-    vec2 uv1 = fragTexCoord + vec2(skyUbo.time * 0.003, skyUbo.time * 0.001);
-    vec2 uv2 = fragTexCoord + vec2(-skyUbo.time * 0.002, skyUbo.time * 0.0015);
+    vec2 uv1 = fragTexCoord + vec2(ubo.time * 0.003, ubo.time * 0.001);
+    vec2 uv2 = fragTexCoord + vec2(-ubo.time * 0.002, ubo.time * 0.0015);
     uv1.x = fract(uv1.x);
     uv2.x = fract(uv2.x);
     vec3 sample1 = texture(texSampler, uv1).rgb;

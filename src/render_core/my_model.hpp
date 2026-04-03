@@ -50,6 +50,7 @@ class MyModel {
     MyModel &operator=(const MyModel &) = delete;
 
     AABB getBound() const { return bound; }
+    uint32_t getIndexCount() const { return indexCount; }
 
     static std::unique_ptr<MyModel> createModelFromFile(Device &device, const std::string filepath);
 
