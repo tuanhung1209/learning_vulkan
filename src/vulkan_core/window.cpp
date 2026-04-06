@@ -21,11 +21,19 @@ void Window::initwindow(){
     window = glfwCreateWindow(width, height, windowName.c_str(), nullptr, nullptr);
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, frameBufferResizeCallback);
+    glfwSetDropCallback(window, dropCallback);
 }
 
 void Window::createWindowSurface(VkInstance instance, VkSurfaceKHR *surface){
     if (glfwCreateWindowSurface(instance, window, nullptr, surface) != VK_SUCCESS){
         throw std::runtime_error("fail to create surface");
+    }
+}
+
+void Window::dropCallback(GLFWwindow *window, int count, const char **paths){
+    if (count > 0) {
+        auto curWindow = reinterpret_cast<Window *>(glfwGetWindowUserPointer(window));
+        curWindow->droppedFilePath = paths[0];
     }
 }
 

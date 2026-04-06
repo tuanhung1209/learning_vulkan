@@ -94,6 +94,7 @@ class MyGameObject {
     glm::vec3 color{};
     TransformComponent transform{};
 
+    std::string modelFilePath{};
     std::shared_ptr<MyModel> model{};
     std::shared_ptr<MyTexture> texture = nullptr;
 

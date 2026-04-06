@@ -20,6 +20,7 @@ class MyPlayer {
     void update(GLFWwindow *window, float dt, MyGameObject::Map &gameObjects, BulletHandler &bulletHandler);
 
     MyGameObject::id_t getPlayerId() const { return playerId; }
+    void setPlayerId(MyGameObject::id_t id) { playerId = id; }
 
   private:
     MyCamera &camera;

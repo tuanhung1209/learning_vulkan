@@ -4,6 +4,7 @@
 #include "game/physics_utils.hpp"
 #include "game/terrain_generation.hpp"
 #include "imgui.h"
+#include "my_save_system.hpp"
 #include "render_core/my_frame_info.hpp"
 #include "render_core/my_imgui.hpp"
 #include "render_core/my_texture.hpp"
@@ -71,6 +72,9 @@ void FirstApp::run() {
 
     SkyUbo skyUbo{};
 
+    SaveSystem saveSystem{"assets/scene/save.json"};
+    std::string droppedFile;
+
     TerrainGenerator terrainGen{device};
     std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(device, "assets/models/quad.obj");
     terrainGen.createTerrain(gameObjects, quadModel);
@@ -125,6 +129,26 @@ void FirstApp::run() {
             guiRenderSystem.newFrame();
             ImGui::Begin("Debug");
             ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+            if (ImGui::Button("save")) { saveSystem.saveScene(gameObjects, terrainGen.config, skyUbo); };
+
+            if (window.hasDroppedFile()) { droppedFile = window.consumeDroppedFile(); }
+            if (!droppedFile.empty()) {
+                ImGui::Text("File: %s", droppedFile.c_str());
+                if (ImGui::Button("Load")) {
+                    vkDeviceWaitIdle(device.device());
+                    gameObjects.clear();
+                    saveSystem.loadScene(device, droppedFile, gameObjects, terrainGen.config, skyUbo);
+                    terrainGen.createTerrain(gameObjects, quadModel);
+
+                    auto newPlayer = MyGameObject::createGameObject();
+                    newPlayer.transform.translation = glm::vec3(1.f, -10.f, 1.f);
+                    mainPlayer.setPlayerId(newPlayer.getId());
+                    gameObjects.emplace(newPlayer.getId(), std::move(newPlayer));
+                    grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(),
+                                                      terrainGen.config.heightScale);
+                    droppedFile.clear();
+                }
+            }
             ImGui::End();
 
             if (terrainGen.drawGui()) { shouldRegenerateTerrain = true; }
@@ -181,6 +205,7 @@ void FirstApp::loadGameObjects() {
     std::shared_ptr<MyModel> sphereModel = MyModel::createModelFromFile(device, "assets/models/sphere.obj");
 
     auto sea = MyGameObject::createGameObject();
+    sea.modelFilePath = "assets/models/quad.obj";
     sea.model = quadModel;
     sea.transform.translation = {0.f, 0.f, 0.f};
     sea.transform.scale = {10000.f, 1.f, 10000.f};
@@ -192,24 +217,28 @@ void FirstApp::loadGameObjects() {
     gameObjects.emplace(sea.getId(), std::move(sea));
 
     auto smooth_vase = MyGameObject::createGameObject();
+    smooth_vase.modelFilePath = "assets/models/smooth_vase.obj";
     smooth_vase.model = smoothVase;
     smooth_vase.transform.translation = {-1.5f, 0.f, 0.f};
     smooth_vase.transform.scale = {5.f, 5.f, 5.f};
     gameObjects.emplace(smooth_vase.getId(), std::move(smooth_vase));
 
     auto flat_vase = MyGameObject::createGameObject();
+    flat_vase.modelFilePath = "assets/models/flat_vase.obj";
     flat_vase.model = roughVase;
     flat_vase.transform.translation = {1.5f, 0.f, 0.f};
     flat_vase.transform.scale = {5.f, 5.f, 5.f};
     gameObjects.emplace(flat_vase.getId(), std::move(flat_vase));
 
     auto sphere = MyGameObject::createGameObject();
+    sphere.modelFilePath = "assets/models/flat_vase.obj";
     sphere.model = sphereModel;
     sphere.transform.translation = {1.5f, 0.f, 2.f};
     sphere.transform.scale = {5.f, 5.f, 5.f};
     gameObjects.emplace(sphere.getId(), std::move(sphere));
 
     auto cube1 = MyGameObject::createGameObject();
+    cube1.modelFilePath = "assets/models/colored_cube.obj";
     cube1.model = cubeModel;
     cube1.transform.translation = {-0.5f, -3.f, 1.f};
     cube1.transform.scale = {0.5f, 0.5f, 0.5f};
@@ -220,6 +249,7 @@ void FirstApp::loadGameObjects() {
     gameObjects.emplace(cube1.getId(), std::move(cube1));
 
     auto cube2 = MyGameObject::createGameObject();
+    cube2.modelFilePath = "assets/models/colored_cube.obj";
     cube2.model = cubeModel;
     cube2.transform.translation = {0.5f, -15.f, 1.f};
     cube2.transform.scale = {0.5f, 0.5f, 0.5f};

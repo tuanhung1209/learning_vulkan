@@ -54,7 +54,7 @@ struct SimplePushConstantData {
 };
 
 struct GrassComputePush {
-    // Compute (20 bytes)
+    // Grass
     uint32_t gridSize{512};
     uint32_t terrainResolution{512};
     float heightScale{120.0f};

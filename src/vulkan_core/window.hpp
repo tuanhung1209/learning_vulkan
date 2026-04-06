@@ -24,13 +24,18 @@ public:
     void createWindowSurface(VkInstance instance, VkSurfaceKHR *surface);
     GLFWwindow *getWindow() const {return window;}
 
+    bool hasDroppedFile() const { return !droppedFilePath.empty(); }
+    std::string consumeDroppedFile() { std::string path = droppedFilePath; droppedFilePath.clear(); return path; }
+
 private:
     static void frameBufferResizeCallback(GLFWwindow *window, int width, int height);
+    static void dropCallback(GLFWwindow *window, int count, const char **paths);
     void initwindow();
 
     int width;
     int height;
     bool frameBufferResized = false;
+    std::string droppedFilePath;
 
     std::string windowName;
     GLFWwindow *window;
