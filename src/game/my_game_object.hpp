@@ -80,6 +80,8 @@ class MyGameObject {
         return MyGameObject{currentId++};
     }
 
+    static MyGameObject createGameObjectWithId(id_t id) { return MyGameObject(id); }
+
     static MyGameObject createPointLight(float intensity = 10.f, float radius = 0.1f,
                                          glm::vec3 color = glm::vec3(1.f));
 
@@ -96,6 +98,7 @@ class MyGameObject {
 
     std::string modelFilePath{};
     std::shared_ptr<MyModel> model{};
+    std::string textureFilePath{};
     std::shared_ptr<MyTexture> texture = nullptr;
 
     std::unique_ptr<PointLightComponent> pointLight = nullptr;

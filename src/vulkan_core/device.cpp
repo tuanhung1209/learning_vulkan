@@ -520,7 +520,7 @@ VkImageView Device::createImageViewWithInfo(VkImage &image, VkFormat format) {
 }
 
 void Device::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout,
-                                    VkImageLayout newLayout) {
+                                   VkImageLayout newLayout) {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
     VkImageMemoryBarrier barrier{};

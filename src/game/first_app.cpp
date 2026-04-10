@@ -21,6 +21,7 @@
 #include <glm/common.hpp>
 #include <iostream>
 #include <memory>
+#include <string>
 #include <vector>
 
 #define GLM_FORCE_RADIANS
@@ -72,8 +73,9 @@ void FirstApp::run() {
 
     SkyUbo skyUbo{};
 
-    SaveSystem saveSystem{"assets/scene/save.json"};
+    SaveSystem saveSystem{device};
     std::string droppedFile;
+    static char buffer[128];
 
     TerrainGenerator terrainGen{device};
     std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(device, "assets/models/quad.obj");
@@ -127,25 +129,32 @@ void FirstApp::run() {
                                 gameObjects};
 
             guiRenderSystem.newFrame();
-            ImGui::Begin("Debug");
+            ImGui::Begin("Game");
             ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-            if (ImGui::Button("save")) { saveSystem.saveScene(gameObjects, terrainGen.config, skyUbo); };
+            ImGui::InputText("save file", buffer, IM_ARRAYSIZE(buffer), ImGuiInputTextFlags_EnterReturnsTrue);
+            if (ImGui::Button("save")) {
+                std::string savePath = "assets/scenes/" + std::string(buffer) + ".json";
+                saveSystem.saveScene(savePath, gameObjects, terrainGen.config, skyUbo,
+                                     grassRenderSystem.getPush());
+            };
 
             if (window.hasDroppedFile()) { droppedFile = window.consumeDroppedFile(); }
+
             if (!droppedFile.empty()) {
                 ImGui::Text("File: %s", droppedFile.c_str());
                 if (ImGui::Button("Load")) {
                     vkDeviceWaitIdle(device.device());
                     gameObjects.clear();
-                    saveSystem.loadScene(device, droppedFile, gameObjects, terrainGen.config, skyUbo);
-                    terrainGen.createTerrain(gameObjects, quadModel);
+                    saveSystem.loadScene(droppedFile, gameObjects, terrainGen.config, skyUbo,
+                                         grassRenderSystem.getPush());
 
+                    // Re-create the player object after loading
                     auto newPlayer = MyGameObject::createGameObject();
                     newPlayer.transform.translation = glm::vec3(1.f, -10.f, 1.f);
                     mainPlayer.setPlayerId(newPlayer.getId());
                     gameObjects.emplace(newPlayer.getId(), std::move(newPlayer));
-                    grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(),
-                                                      terrainGen.config.heightScale);
+
+                    shouldRegenerateTerrain = true;
                     droppedFile.clear();
                 }
             }
@@ -206,6 +215,7 @@ void FirstApp::loadGameObjects() {
 
     auto sea = MyGameObject::createGameObject();
     sea.modelFilePath = "assets/models/quad.obj";
+    sea.textureFilePath = "assets/textures/water.jpg";
     sea.model = quadModel;
     sea.transform.translation = {0.f, 0.f, 0.f};
     sea.transform.scale = {10000.f, 1.f, 10000.f};

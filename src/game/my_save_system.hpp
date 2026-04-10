@@ -10,16 +10,17 @@ namespace my {
 
 class SaveSystem {
   public:
-    SaveSystem(std::string saveFilePath);
+    SaveSystem(Device &device);
     ~SaveSystem();
 
-    void saveScene(MyGameObject::Map &gameObjecs, TerrainGenerator::TerrainConfig &config, SkyUbo &skyUbo);
-    void loadScene(Device &device, std::string loadFilePath, MyGameObject::Map &gameObjects,
-                   TerrainGenerator::TerrainConfig &config, SkyUbo &skyUbo);
+    void saveScene(std::string saveFilePath, MyGameObject::Map &gameObjecs,
+                   TerrainGenerator::TerrainConfig &config, SkyUbo &skyUbo, GrassComputePush &grassPush);
+    void loadScene(std::string loadFilePath, MyGameObject::Map &gameObjects,
+                   TerrainGenerator::TerrainConfig &config, SkyUbo &skyUbo, GrassComputePush &grassPush);
 
   private:
-    std::string saveFilePath;
     nlohmann::json sceneJson;
+    Device &myDevice;
 };
 
 }; // namespace my

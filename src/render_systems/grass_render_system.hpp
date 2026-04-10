@@ -29,6 +29,8 @@ class GrassRenderSystem {
     void drawGui(float terrainHeightScale);
     void updateHeightMap(const std::vector<float> &heightMap, float heightScale);
 
+    GrassComputePush &getPush() { return push; }
+
   private:
     void createComputePoolAndSetLayout();
     void createGrassComputeBuffer();

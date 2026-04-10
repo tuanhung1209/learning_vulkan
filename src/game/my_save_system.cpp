@@ -2,22 +2,26 @@
 #include "game/my_game_object.hpp"
 #include "lib/json.hpp"
 #include <fstream>
+#include <memory>
 
 using json = nlohmann::json;
 
 namespace my {
-SaveSystem::SaveSystem(std::string saveFilePath) : saveFilePath{saveFilePath} {};
 
+SaveSystem::SaveSystem(Device &device) : myDevice{device} {};
 SaveSystem::~SaveSystem() {};
 
-void SaveSystem::saveScene(MyGameObject::Map &gameObjecs, TerrainGenerator::TerrainConfig &config,
-                           SkyUbo &skyUbo) {
+void SaveSystem::saveScene(std::string saveFilePath, MyGameObject::Map &gameObjecs,
+                           TerrainGenerator::TerrainConfig &config, SkyUbo &skyUbo,
+                           GrassComputePush &grassPush) {
     // GameObjects
     json jsonGameObjectArray = json::array();
     for (auto &kv : gameObjecs) {
         auto &obj = kv.second;
 
         json jsonObj;
+        jsonObj["id"] = kv.first;
+        jsonObj["textureFilePath"] = obj.textureFilePath;
         jsonObj["modelFilePath"] = obj.modelFilePath;
         jsonObj["transform"]["translation"] = {obj.transform.translation.x, obj.transform.translation.y,
                                                obj.transform.translation.z};
@@ -73,22 +77,52 @@ void SaveSystem::saveScene(MyGameObject::Map &gameObjecs, TerrainGenerator::Terr
                                skyUbo.sunDirection.w};
     sceneJson["sky"] = skyJson;
 
+    // Grass
+    json grassJson;
+    grassJson["gridSize"] = grassPush.gridSize;
+    grassJson["terrainResolution"] = grassPush.terrainResolution;
+    grassJson["heightScale"] = grassPush.heightScale;
+    grassJson["spacing"] = grassPush.spacing;
+    grassJson["bladeHeight"] = grassPush.bladeHeight;
+    grassJson["windDirX"] = grassPush.windDirX;
+    grassJson["windDirZ"] = grassPush.windDirZ;
+    grassJson["windFreq"] = grassPush.windFreq;
+    grassJson["windAmplitude"] = grassPush.windAmplitude;
+    grassJson["turbPower"] = grassPush.turbPower;
+    grassJson["turbSize"] = grassPush.turbSize;
+    grassJson["droopStrength"] = grassPush.droopStrength;
+    grassJson["xPeriod"] = grassPush.xPeriod;
+    grassJson["yPeriod"] = grassPush.yPeriod;
+    grassJson["windBias"] = grassPush.windBias;
+    grassJson["baseColor"] = {grassPush.baseColor.x, grassPush.baseColor.y, grassPush.baseColor.z,
+                              grassPush.baseColor.w};
+    grassJson["tipColor"] = {grassPush.tipColor.x, grassPush.tipColor.y, grassPush.tipColor.z,
+                             grassPush.tipColor.w};
+    sceneJson["grass"] = grassJson;
+
     std::ofstream saveFile(saveFilePath);
     saveFile << sceneJson.dump(4);
 }
 
-void SaveSystem::loadScene(Device &device, std::string loadFilePath, MyGameObject::Map &gameObjects,
-                           TerrainGenerator::TerrainConfig &config, SkyUbo &skyUbo) {
+void SaveSystem::loadScene(std::string loadFilePath, MyGameObject::Map &gameObjects,
+                           TerrainGenerator::TerrainConfig &config, SkyUbo &skyUbo,
+                           GrassComputePush &grassPush) {
     std::ifstream loadFile(loadFilePath);
     json jsonScene = json::parse(loadFile);
 
     // GameObjects
     for (auto &oldObj : jsonScene["gameObjects"]) {
-        auto obj = MyGameObject::createGameObject();
+        auto obj = MyGameObject::createGameObjectWithId(oldObj["id"]);
 
         obj.modelFilePath = oldObj["modelFilePath"];
+        obj.textureFilePath = oldObj["textureFilePath"];
+
         if (!obj.modelFilePath.empty()) {
-            obj.model = MyModel::createModelFromFile(device, obj.modelFilePath);
+            obj.model = MyModel::createModelFromFile(myDevice, obj.modelFilePath);
+        }
+
+        if (!obj.textureFilePath.empty()) {
+            obj.texture = std::make_shared<MyTexture>(myDevice, obj.textureFilePath);
         }
 
         obj.transform.translation = {oldObj["transform"]["translation"][0],
@@ -147,6 +181,28 @@ void SaveSystem::loadScene(Device &device, std::string loadFilePath, MyGameObjec
                               skyData["skyTextureColor"][2], skyData["skyTextureColor"][3]};
     skyUbo.sunDirection = {skyData["sunDirection"][0], skyData["sunDirection"][1], skyData["sunDirection"][2],
                            skyData["sunDirection"][3]};
+
+    // Grass
+    auto &grassData = jsonScene["grass"];
+    grassPush.gridSize = grassData["gridSize"];
+    grassPush.terrainResolution = grassData["terrainResolution"];
+    grassPush.heightScale = grassData["heightScale"];
+    grassPush.spacing = grassData["spacing"];
+    grassPush.bladeHeight = grassData["bladeHeight"];
+    grassPush.windDirX = grassData["windDirX"];
+    grassPush.windDirZ = grassData["windDirZ"];
+    grassPush.windFreq = grassData["windFreq"];
+    grassPush.windAmplitude = grassData["windAmplitude"];
+    grassPush.turbPower = grassData["turbPower"];
+    grassPush.turbSize = grassData["turbSize"];
+    grassPush.droopStrength = grassData["droopStrength"];
+    grassPush.xPeriod = grassData["xPeriod"];
+    grassPush.yPeriod = grassData["yPeriod"];
+    grassPush.windBias = grassData["windBias"];
+    grassPush.baseColor = {grassData["baseColor"][0], grassData["baseColor"][1], grassData["baseColor"][2],
+                           grassData["baseColor"][3]};
+    grassPush.tipColor = {grassData["tipColor"][0], grassData["tipColor"][1], grassData["tipColor"][2],
+                          grassData["tipColor"][3]};
 }
 
 }; // namespace my
