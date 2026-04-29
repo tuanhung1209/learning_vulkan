@@ -4,6 +4,8 @@
 #include "game/physics_utils.hpp"
 #include "game/terrain_generation.hpp"
 #include "imgui.h"
+#include "input/glfw_input_bridge.hpp"
+#include "input/input_state.hpp"
 #include "my_save_system.hpp"
 #include "render_core/my_frame_info.hpp"
 #include "render_core/my_imgui.hpp"
@@ -91,9 +93,9 @@ void FirstApp::run() {
     BulletHandler bulletHandler{bulletModel};
 
     auto playerObject = MyGameObject::createGameObject();
-    playerObject.transform.translation = glm::vec3(1.f, -10.f, 1.f);
-    // playerObject.rigidBody = std::make_unique<RigidBodyComponent>();
-    MyPlayer mainPlayer{camera, playerObject.getId()};
+    InputState inputState{};
+    GlfwInput glfwInput{window, inputState};
+    MyPlayer mainPlayer{camera, playerObject.getId(), inputState};
     gameObjects.emplace(playerObject.getId(), std::move(playerObject));
 
     PhysicsWorld physicsWorld;
@@ -116,7 +118,9 @@ void FirstApp::run() {
             shouldRegenerateTerrain = false;
         }
 
-        mainPlayer.update(window.getWindow(), frameTime, gameObjects, bulletHandler);
+        glfwInput.pollKeyboardFromGlfw(window);
+        glfwInput.pollMouseFromGlfw(window);
+        mainPlayer.update(inputState, frameTime, gameObjects, bulletHandler);
         bulletHandler.update(frameTime);
         physicsWorld.step(gameObjects, bulletHandler.getBullets(), frameTime);
 
@@ -196,6 +200,7 @@ void FirstApp::run() {
             myRenderer.endSwapChainRenderPass(commandBuffer);
             myRenderer.endFrame();
         }
+        inputState.endFrame();
     }
     vkDeviceWaitIdle(device.device());
 }
