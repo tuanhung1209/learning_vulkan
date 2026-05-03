@@ -2,12 +2,14 @@
 
 #include "my_abundance_object_handler.hpp"
 #include "my_game_object.hpp"
+#include "platfroms/wayland/wayland_window.hpp"
 #include "render_core/my_camera.hpp"
 #include "render_core/my_renderer.hpp"
 #include "vulkan_core/device.hpp"
 #include "vulkan_core/my_descriptors.hpp"
 #include "vulkan_core/window.hpp"
 
+#include <GLFW/glfw3.h>
 #include <memory>
 
 namespace my {
@@ -28,9 +30,14 @@ class FirstApp {
   private:
     void loadGameObjects();
 
+    WaylandWindow window1{"wallpaper"};
     Window window{WIDTH, HEIGHT, "cpp is hard"};
-    Device device{window};
-    MyRenderer myRenderer{window, device};
+    Device device{[this](VkInstance inst) {
+        VkSurfaceKHR s;
+        window.createWindowSurface(inst, &s);
+        return s;
+    }};
+    MyRenderer myRenderer{[this] { return window.getExtend(); }, [] { glfwWaitEvents(); }, device};
     // may change back to mail box but vsync is power saving ?
 
     std::unique_ptr<MyDescriptorPool> globalPool;

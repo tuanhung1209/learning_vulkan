@@ -1,8 +1,7 @@
 #pragma once
 
-#include "vulkan_core/window.hpp"
-
 // std lib headers
+#include <functional>
 #include <string>
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -31,7 +30,7 @@ class Device {
     const bool enableValidationLayers = true;
 #endif
 
-    Device(Window &window);
+    Device(std::function<VkSurfaceKHR(VkInstance)> surfaceMaker);
     ~Device();
 
     // Not copyable or movable
@@ -77,7 +76,6 @@ class Device {
   private:
     void createInstance();
     void setupDebugMessenger();
-    void createSurface();
     void pickPhysicalDevice();
     void createLogicalDevice();
     void createCommandPool();
@@ -95,7 +93,6 @@ class Device {
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugMessenger;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-    Window &window;
     VkCommandPool commandPool;
 
     VkDevice device_;

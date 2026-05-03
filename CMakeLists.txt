@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(VulkanEngine LANGUAGES CXX)
+project(VulkanEngine LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,9 +9,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Vulkan REQUIRED)
 find_package(glfw3 3.3 REQUIRED)
 find_package(Threads REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(WAYLAND REQUIRED wayland-client)
 
 # ── Sources ───────────────────────────────────────────────────
 file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB WAYLAND_PROTOCOL_SOURCES CONFIGURE_DEPENDS src/platfroms/wayland/*-protocol.c)
+list(APPEND ENGINE_SOURCES ${WAYLAND_PROTOCOL_SOURCES})
 
 set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/lib/imgui)
 set(IMGUI_SOURCES
@@ -32,6 +36,7 @@ target_include_directories(VulkanOut PRIVATE
     ${CMAKE_SOURCE_DIR}/lib
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
+    ${WAYLAND_INCLUDE_DIRS}
 )
 
 target_link_libraries(VulkanOut PRIVATE
@@ -39,6 +44,7 @@ target_link_libraries(VulkanOut PRIVATE
     glfw
     Threads::Threads
     ${CMAKE_DL_LIBS}
+    ${WAYLAND_LIBRARIES}
 )
 
 # X11 libs on Linux

@@ -7,7 +7,9 @@
 
 namespace my {
 
-MyRenderer::MyRenderer(Window &window, Device &device) : myWindow{window}, myDevice{device} {
+MyRenderer::MyRenderer(std::function<VkExtent2D()> getExtent, std::function<void()> waitEvents,
+                       Device &device)
+    : getExtentFn{std::move(getExtent)}, waitEventsFn{std::move(waitEvents)}, myDevice{device} {
     recreateSwapChain();
     createCommandBuffers();
 }
@@ -15,10 +17,10 @@ MyRenderer::MyRenderer(Window &window, Device &device) : myWindow{window}, myDev
 MyRenderer::~MyRenderer() { freeCommandBuffers(); }
 
 void MyRenderer::recreateSwapChain() {
-    auto extend = myWindow.getExtend();
+    auto extend = getExtentFn();
     while (extend.width == 0 || extend.height == 0) {
-        extend = myWindow.getExtend();
-        glfwWaitEvents();
+        waitEventsFn();
+        extend = getExtentFn();
     }
 
     vkDeviceWaitIdle(myDevice.device());
@@ -89,9 +91,7 @@ void MyRenderer::endFrame() {
 
     auto result = mySwapChain->submitCommandBuffers(&commandBuffer, &currentImageIndex);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
-        myWindow.wasWindowResized() == true) {
-        myWindow.resetWindowResizedFlag();
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         recreateSwapChain();
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swap chain image");

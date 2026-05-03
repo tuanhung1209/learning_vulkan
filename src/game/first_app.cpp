@@ -102,7 +102,8 @@ void FirstApp::run() {
     auto currentTime = std::chrono::high_resolution_clock::now();
     float totalTime = 0.f;
 
-    while (!window.shouldClose()) {
+    while (!window1.shouldClose()) {
+        window1.pollEvents();
         glfwPollEvents();
 
         auto newTime = std::chrono::high_resolution_clock::now();

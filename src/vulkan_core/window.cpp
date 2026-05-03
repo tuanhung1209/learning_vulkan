@@ -1,19 +1,17 @@
 #include "window.hpp"
-#include <string>
 #include <stdexcept>
+#include <string>
 
-namespace my{
+namespace my {
 
-Window::Window(int w, int h, std::string name) : width{w}, height{h}, windowName{name} {
-    initwindow();
-}
+Window::Window(int w, int h, std::string name) : width{w}, height{h}, windowName{name} { initwindow(); }
 
-Window::~Window(){
+Window::~Window() {
     glfwDestroyWindow(window);
     glfwTerminate();
 }
 
-void Window::initwindow(){
+void Window::initwindow() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -24,24 +22,24 @@ void Window::initwindow(){
     glfwSetDropCallback(window, dropCallback);
 }
 
-void Window::createWindowSurface(VkInstance instance, VkSurfaceKHR *surface){
-    if (glfwCreateWindowSurface(instance, window, nullptr, surface) != VK_SUCCESS){
+void Window::createWindowSurface(VkInstance instance, VkSurfaceKHR *surface) {
+    if (glfwCreateWindowSurface(instance, window, nullptr, surface) != VK_SUCCESS) {
         throw std::runtime_error("fail to create surface");
     }
 }
 
-void Window::dropCallback(GLFWwindow *window, int count, const char **paths){
+void Window::dropCallback(GLFWwindow *window, int count, const char **paths) {
     if (count > 0) {
         auto curWindow = reinterpret_cast<Window *>(glfwGetWindowUserPointer(window));
         curWindow->droppedFilePath = paths[0];
     }
 }
 
-void Window::frameBufferResizeCallback(GLFWwindow *window, int width, int height){
+void Window::frameBufferResizeCallback(GLFWwindow *window, int width, int height) {
     auto curWindow = reinterpret_cast<Window *>(glfwGetWindowUserPointer(window));
     curWindow->frameBufferResized = true;
     curWindow->width = width;
     curWindow->height = height;
 }
 
-}
+} // namespace my

@@ -1,4 +1,6 @@
 #include "vulkan_core/device.hpp"
+#include <GLFW/glfw3.h>
+#include <vulkan/vulkan_wayland.h>
 
 // std headers
 #include <cstring>
@@ -39,10 +41,10 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 }
 
 // class member functions
-Device::Device(Window &window) : window{window} {
+Device::Device(std::function<VkSurfaceKHR(VkInstance)> surfaceMaker) {
     createInstance();
     setupDebugMessenger();
-    createSurface();
+    surface_ = surfaceMaker(instance);
     pickPhysicalDevice();
     createLogicalDevice();
     createCommandPool();
@@ -76,6 +78,10 @@ void Device::createInstance() {
     createInfo.pApplicationInfo = &appInfo;
 
     auto extensions = getRequiredExtensions();
+
+    // wayland surface extensions
+    extensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
 
@@ -189,8 +195,6 @@ void Device::createCommandPool() {
         throw std::runtime_error("failed to create command pool!");
     }
 }
-
-void Device::createSurface() { window.createWindowSurface(instance, &surface_); }
 
 bool Device::isDeviceSuitable(VkPhysicalDevice device) {
     QueueFamilyIndices indices = findQueueFamilies(device);

@@ -4,6 +4,7 @@
 #include "render_core/my_renderer.hpp"
 #include "vulkan_core/device.hpp"
 #include "vulkan_core/my_descriptors.hpp"
+#include "vulkan_core/window.hpp"
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>

@@ -1,18 +1,20 @@
 #pragma once
 
-#include "vulkan_core/window.hpp"
 #include "vulkan_core/device.hpp"
 #include "vulkan_core/swap_chain.hpp"
 
+#include <cassert>
+#include <functional>
 #include <memory>
 #include <vector>
-#include <cassert>
 
 namespace my{
 
 class MyRenderer{
     public:
-        MyRenderer(Window& window, Device& device);
+        MyRenderer(std::function<VkExtent2D()> getExtent,
+                   std::function<void()> waitEvents,
+                   Device& device);
         ~MyRenderer();
 
         MyRenderer(const MyRenderer &) = delete;
@@ -42,7 +44,8 @@ class MyRenderer{
         void freeCommandBuffers();
         void recreateSwapChain();
 
-        Window& myWindow;
+        std::function<VkExtent2D()> getExtentFn;
+        std::function<void()> waitEventsFn;
         Device& myDevice;
         // currently using mailbox not vsync(fifo) will change if run into error
         // use pointer to easily delete and recreate for window resize
