@@ -1,18 +1,21 @@
 #include "game/first_app.hpp"
 
+#include <cstdlib>
 #include <iostream>
 #include <stdexcept>
-#include <cstdlib>
 
-int main(){
+int main(int argc, char *argv[]) {
+    Mode mode = Mode::Wallpaper;
 
-    my::FirstApp app{};
-
-    try
-    {
-        app.run();
+    for (int i = 0; i < argc; i++) {
+        if (std::string(argv[i]) == "--edit") { mode = Mode::Edit; }
     }
-    catch (const std::exception &e){
+
+    my::FirstApp app{mode};
+
+    try {
+        app.run();
+    } catch (const std::exception &e) {
         std::cerr << e.what() << '\n';
         return EXIT_FAILURE;
     }

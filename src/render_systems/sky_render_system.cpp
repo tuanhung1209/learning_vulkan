@@ -24,7 +24,9 @@ SkyRenderSystem::SkyRenderSystem(Device &device, VkRenderPass renderPass,
     createGraphicPipelineLayout(globalSetLayout);
     createGraphicPipeline(renderPass);
 }
-SkyRenderSystem::~SkyRenderSystem() { vkDestroyPipelineLayout(myDevice.device(), graphicPipelineLayout, nullptr); }
+SkyRenderSystem::~SkyRenderSystem() {
+    vkDestroyPipelineLayout(myDevice.device(), graphicPipelineLayout, nullptr);
+}
 
 void SkyRenderSystem::createSkyUboPoolAndSetLayout() {
     skyUboBuffers.resize(SwapChain::MAX_FRAMES_IN_FLIGHT);
@@ -109,16 +111,19 @@ void SkyRenderSystem::createGraphicPipeline(VkRenderPass renderPass) {
     pipelineConfig.renderPass = renderPass;
     pipelineConfig.pipelineLayout = graphicPipelineLayout;
     myGraphicPipeline = std::make_unique<GraphicPipeline>(myDevice, "shaders/sky_shader.vert.spv",
-                                            "shaders/sky_shader.frag.spv", pipelineConfig);
+                                                          "shaders/sky_shader.frag.spv", pipelineConfig);
 }
 
-void SkyRenderSystem::updateUbo(FrameInfo &frameInfo, SkyUbo &skyUbo) {
+void SkyRenderSystem::drawGui(SkyUbo &skyUbo) {
     ImGui::Begin("Sky");
     ImGui::ColorPicker4("Horizon Color", &skyUbo.horizonColor.x);
     ImGui::ColorPicker4("Sky Color", &skyUbo.skyColor.x);
     ImGui::ColorPicker4("Sky TColor", &skyUbo.skyTextureColor.x);
     ImGui::SliderFloat3("Sun Direction", &skyUbo.sunDirection.x, -1.f, 1.f);
     ImGui::End();
+}
+
+void SkyRenderSystem::updateUbo(FrameInfo &frameInfo, SkyUbo &skyUbo) {
     skyUboBuffers[frameInfo.frameIndex]->writeToBuffer(&skyUbo);
     skyUboBuffers[frameInfo.frameIndex]->flush();
 }
@@ -126,14 +131,14 @@ void SkyRenderSystem::updateUbo(FrameInfo &frameInfo, SkyUbo &skyUbo) {
 void SkyRenderSystem::renderSky(FrameInfo &frameInfo) {
     myGraphicPipeline->bind(frameInfo.commandBuffer);
 
-    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout, 0, 1,
-                            &frameInfo.globalDescriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout,
+                            0, 1, &frameInfo.globalDescriptorSet, 0, nullptr);
 
-    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout, 1, 1,
-                            &skyTextureDescriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout,
+                            1, 1, &skyTextureDescriptorSet, 0, nullptr);
 
-    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout, 2, 1,
-                            &skyUboDescriptorSet[frameInfo.frameIndex], 0, nullptr);
+    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout,
+                            2, 1, &skyUboDescriptorSet[frameInfo.frameIndex], 0, nullptr);
 
     skyModel->bind(frameInfo.commandBuffer);
     skyModel->draw(frameInfo.commandBuffer);

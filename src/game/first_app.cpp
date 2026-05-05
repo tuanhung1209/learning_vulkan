@@ -30,10 +30,35 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
+
 namespace my {
 
-FirstApp::FirstApp() {
-    globalPool = MyDescriptorPool::Builder(device)
+FirstApp::FirstApp(Mode mode) : mode_(mode) {
+    if (mode_ == Mode::Edit) {
+        glfwWindow = std::make_unique<GlfwWindow>(WIDTH, HEIGHT, "wallpaperEdit");
+
+        device = std::make_unique<Device>([this](VkInstance inst) {
+            VkSurfaceKHR s;
+            glfwWindow->createWindowSurface(inst, &s);
+            return s;
+        });
+
+        myRenderer = std::make_unique<MyRenderer>([this] { return glfwWindow->getExtend(); },
+                                                  [] { glfwWaitEvents(); }, *device);
+
+    } else {
+        waylandWindow = std::make_unique<WaylandWindow>("wallpaper");
+
+        device = std::make_unique<Device>([this](VkInstance isnt) {
+            waylandWindow->createVulkanSurfaces(isnt);
+            return waylandWindow->getMonitor()[0].vkSurface;
+        });
+
+        myRenderer = std::make_unique<MyRenderer>([this] { return waylandWindow->getExtent(); },
+                                                  [this] { waylandWindow->pollEvents(); }, *device);
+    }
+
+    globalPool = MyDescriptorPool::Builder(*device)
                      .setMaxSets(SwapChain::MAX_FRAMES_IN_FLIGHT)
                      .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SwapChain::MAX_FRAMES_IN_FLIGHT)
                      .build();
@@ -46,12 +71,12 @@ void FirstApp::run() {
     std::vector<std::unique_ptr<MyBuffer>> uboBuffers(SwapChain::MAX_FRAMES_IN_FLIGHT);
     for (int i = 0; i < uboBuffers.size(); i++) {
         uboBuffers[i] =
-            std::make_unique<MyBuffer>(device, sizeof(GlobalUbo), 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            std::make_unique<MyBuffer>(*device, sizeof(GlobalUbo), 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         uboBuffers[i]->map();
     }
 
-    auto globalSetLayout = MyDescriptorSetLayout::Builder(device)
+    auto globalSetLayout = MyDescriptorSetLayout::Builder(*device)
                                .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
                                .build();
 
@@ -63,24 +88,29 @@ void FirstApp::run() {
             .build(globalDescriptorSet[i]);
     }
 
-    SimpleRenderSystem simpleRenderSystem{device, myRenderer.getSwapChainRenderPass(),
+    SimpleRenderSystem simpleRenderSystem{*device, myRenderer->getSwapChainRenderPass(),
                                           globalSetLayout->getDescriptorSetLayout()};
-    PointLightSystem PointLightSystem{device, myRenderer.getSwapChainRenderPass(),
+    PointLightSystem PointLightSystem{*device, myRenderer->getSwapChainRenderPass(),
                                       globalSetLayout->getDescriptorSetLayout()};
-    SkyRenderSystem skyRenderSystem{device, myRenderer.getSwapChainRenderPass(),
+    SkyRenderSystem skyRenderSystem{*device, myRenderer->getSwapChainRenderPass(),
                                     globalSetLayout->getDescriptorSetLayout()};
-    GrassRenderSystem grassRenderSystem{device, myRenderer.getSwapChainRenderPass(),
+    GrassRenderSystem grassRenderSystem{*device, myRenderer->getSwapChainRenderPass(),
                                         globalSetLayout->getDescriptorSetLayout()};
-    ImGuiWrapper guiRenderSystem{device, window, myRenderer.getSwapChainRenderPass()};
+
+    std::unique_ptr<ImGuiWrapper> guiRenderSystem;
+    if (mode_ == Mode::Edit) {
+        guiRenderSystem =
+            std::make_unique<ImGuiWrapper>(*device, *glfwWindow, myRenderer->getSwapChainRenderPass());
+    }
 
     SkyUbo skyUbo{};
 
-    SaveSystem saveSystem{device};
+    SaveSystem saveSystem{*device};
     std::string droppedFile;
     static char buffer[128];
 
-    TerrainGenerator terrainGen{device};
-    std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(device, "assets/models/quad.obj");
+    TerrainGenerator terrainGen{*device};
+    std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(*device, "assets/models/quad.obj");
     terrainGen.createTerrain(gameObjects, quadModel);
 
     bool shouldRegenerateTerrain = false;
@@ -89,12 +119,14 @@ void FirstApp::run() {
     MyCamera camera{};
     camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
 
-    std::shared_ptr<MyModel> bulletModel = MyModel::createModelFromFile(device, "assets/models/cube.obj");
+    std::shared_ptr<MyModel> bulletModel = MyModel::createModelFromFile(*device, "assets/models/cube.obj");
     BulletHandler bulletHandler{bulletModel};
 
     auto playerObject = MyGameObject::createGameObject();
+    playerObject.transform.translation = glm::vec3(1.f, -100.f, -40.f);
     InputState inputState{};
-    GlfwInput glfwInput{window, inputState};
+    std::unique_ptr<GlfwInput> glfwInput;
+    if (mode_ == Mode::Edit) { glfwInput = std::make_unique<GlfwInput>(*glfwWindow, inputState); }
     MyPlayer mainPlayer{camera, playerObject.getId(), inputState};
     gameObjects.emplace(playerObject.getId(), std::move(playerObject));
 
@@ -102,9 +134,16 @@ void FirstApp::run() {
     auto currentTime = std::chrono::high_resolution_clock::now();
     float totalTime = 0.f;
 
-    while (!window1.shouldClose()) {
-        window1.pollEvents();
-        glfwPollEvents();
+    while (mode_ == Mode::Wallpaper ? !waylandWindow->shouldClose() : !glfwWindow->shouldClose()) {
+        if (mode_ == Mode::Wallpaper) {
+            waylandWindow->pollEvents();
+        } else {
+            glfwPollEvents();
+            if (glfwInput) {
+                glfwInput->pollKeyboardFromGlfw(*glfwWindow);
+                glfwInput->pollMouseFromGlfw(*glfwWindow);
+            }
+        }
 
         auto newTime = std::chrono::high_resolution_clock::now();
         auto frameTime =
@@ -113,60 +152,63 @@ void FirstApp::run() {
         totalTime += frameTime;
 
         if (shouldRegenerateTerrain) {
-            vkDeviceWaitIdle(device.device());
+            vkDeviceWaitIdle(device->device());
             terrainGen.regenerate(gameObjects);
             grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(), terrainGen.config.heightScale);
             shouldRegenerateTerrain = false;
         }
 
-        glfwInput.pollKeyboardFromGlfw(window);
-        glfwInput.pollMouseFromGlfw(window);
         mainPlayer.update(inputState, frameTime, gameObjects, bulletHandler);
         bulletHandler.update(frameTime);
         physicsWorld.step(gameObjects, bulletHandler.getBullets(), frameTime);
 
-        float aspect = myRenderer.getAspectRatio();
+        float aspect = myRenderer->getAspectRatio();
         camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 10000.f);
 
-        if (auto commandBuffer = myRenderer.beginFrame()) {
-            int frameIndex = myRenderer.getFrameIndex();
+        if (auto commandBuffer = myRenderer->beginFrame()) {
+            int frameIndex = myRenderer->getFrameIndex();
             FrameInfo frameInfo{frameIndex, frameTime, commandBuffer, camera, globalDescriptorSet[frameIndex],
                                 gameObjects};
 
-            guiRenderSystem.newFrame();
-            ImGui::Begin("Game");
-            ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-            ImGui::InputText("save file", buffer, IM_ARRAYSIZE(buffer), ImGuiInputTextFlags_EnterReturnsTrue);
-            if (ImGui::Button("save")) {
-                std::string savePath = "assets/scenes/" + std::string(buffer) + ".json";
-                saveSystem.saveScene(savePath, gameObjects, terrainGen.config, skyUbo,
-                                     grassRenderSystem.getPush());
-            };
-
-            if (window.hasDroppedFile()) { droppedFile = window.consumeDroppedFile(); }
-
-            if (!droppedFile.empty()) {
-                ImGui::Text("File: %s", droppedFile.c_str());
-                if (ImGui::Button("Load")) {
-                    vkDeviceWaitIdle(device.device());
-                    gameObjects.clear();
-                    saveSystem.loadScene(droppedFile, gameObjects, terrainGen.config, skyUbo,
+            if (guiRenderSystem) {
+                guiRenderSystem->newFrame();
+                ImGui::Begin("Game");
+                ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+                ImGui::InputText("save file", buffer, IM_ARRAYSIZE(buffer),
+                                 ImGuiInputTextFlags_EnterReturnsTrue);
+                if (ImGui::Button("save")) {
+                    std::string savePath = "assets/scenes/" + std::string(buffer) + ".json";
+                    saveSystem.saveScene(savePath, gameObjects, terrainGen.config, skyUbo,
                                          grassRenderSystem.getPush());
+                };
 
-                    // Re-create the player object after loading
-                    auto newPlayer = MyGameObject::createGameObject();
-                    newPlayer.transform.translation = glm::vec3(1.f, -10.f, 1.f);
-                    mainPlayer.setPlayerId(newPlayer.getId());
-                    gameObjects.emplace(newPlayer.getId(), std::move(newPlayer));
-
-                    shouldRegenerateTerrain = true;
-                    droppedFile.clear();
+                if (glfwWindow && glfwWindow->hasDroppedFile()) {
+                    droppedFile = glfwWindow->consumeDroppedFile();
                 }
-            }
-            ImGui::End();
 
-            if (terrainGen.drawGui()) { shouldRegenerateTerrain = true; }
-            grassRenderSystem.drawGui(terrainGen.config.heightScale);
+                if (!droppedFile.empty()) {
+                    ImGui::Text("File: %s", droppedFile.c_str());
+                    if (ImGui::Button("Load")) {
+                        vkDeviceWaitIdle(device->device());
+                        gameObjects.clear();
+                        saveSystem.loadScene(droppedFile, gameObjects, terrainGen.config, skyUbo,
+                                             grassRenderSystem.getPush());
+
+                        // Re-create the player object after loading
+                        auto newPlayer = MyGameObject::createGameObject();
+                        mainPlayer.setPlayerId(newPlayer.getId());
+                        gameObjects.emplace(newPlayer.getId(), std::move(newPlayer));
+
+                        shouldRegenerateTerrain = true;
+                        droppedFile.clear();
+                    }
+                }
+                ImGui::End();
+
+                if (terrainGen.drawGui()) { shouldRegenerateTerrain = true; }
+                grassRenderSystem.drawGui(terrainGen.config.heightScale);
+                skyRenderSystem.drawGui(skyUbo);
+            }
 
             // line below to update descriptorInfo
             GlobalUbo ubo{};
@@ -179,8 +221,8 @@ void FirstApp::run() {
             ubo.time = totalTime;
 
             skyRenderSystem.updateUbo(frameInfo, skyUbo);
-
             PointLightSystem.update(frameInfo, ubo);
+
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
             uboBuffers[frameIndex]->flush();
 
@@ -188,7 +230,7 @@ void FirstApp::run() {
             grassRenderSystem.computeGrass(frameInfo);
 
             // line below to render
-            myRenderer.beginSwapChainRenderPass(commandBuffer);
+            myRenderer->beginSwapChainRenderPass(commandBuffer);
             skyRenderSystem.renderSky(frameInfo);
             simpleRenderSystem.renderGameObjects(frameInfo);
             bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getGraphicPipelineLayout());
@@ -196,28 +238,28 @@ void FirstApp::run() {
             grassRenderSystem.renderGrass(frameInfo);
             PointLightSystem.renderLight(frameInfo);
 
-            guiRenderSystem.renderGui(frameInfo);
+            if (guiRenderSystem) { guiRenderSystem->renderGui(frameInfo); }
 
-            myRenderer.endSwapChainRenderPass(commandBuffer);
-            myRenderer.endFrame();
+            myRenderer->endSwapChainRenderPass(commandBuffer);
+            myRenderer->endFrame();
         }
         inputState.endFrame();
     }
-    vkDeviceWaitIdle(device.device());
+    vkDeviceWaitIdle(device->device());
 }
 
 void FirstApp::loadGameObjects() {
 
-    auto grassTexture = std::make_shared<MyTexture>(device, "assets/textures/grass.png");
-    auto waterTexture = std::make_shared<MyTexture>(device, "assets/textures/water.jpg");
+    auto grassTexture = std::make_shared<MyTexture>(*device, "assets/textures/grass.png");
+    auto waterTexture = std::make_shared<MyTexture>(*device, "assets/textures/water.jpg");
 
     std::shared_ptr<MyModel> cubeModel =
-        MyModel::createModelFromFile(device, "assets/models/colored_cube.obj");
-    std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(device, "assets/models/quad.obj");
+        MyModel::createModelFromFile(*device, "assets/models/colored_cube.obj");
+    std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(*device, "assets/models/quad.obj");
     std::shared_ptr<MyModel> smoothVase =
-        MyModel::createModelFromFile(device, "assets/models/smooth_vase.obj");
-    std::shared_ptr<MyModel> roughVase = MyModel::createModelFromFile(device, "assets/models/flat_vase.obj");
-    std::shared_ptr<MyModel> sphereModel = MyModel::createModelFromFile(device, "assets/models/sphere.obj");
+        MyModel::createModelFromFile(*device, "assets/models/smooth_vase.obj");
+    std::shared_ptr<MyModel> roughVase = MyModel::createModelFromFile(*device, "assets/models/flat_vase.obj");
+    std::shared_ptr<MyModel> sphereModel = MyModel::createModelFromFile(*device, "assets/models/sphere.obj");
 
     auto sea = MyGameObject::createGameObject();
     sea.modelFilePath = "assets/models/quad.obj";

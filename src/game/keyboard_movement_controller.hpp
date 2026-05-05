@@ -2,7 +2,7 @@
 
 #include "game/my_game_object.hpp"
 #include "input/input_state.hpp"
-#include "vulkan_core/window.hpp"
+#include "platforms/glfw_window.hpp"
 
 namespace my {
 class KeyboardMovementController {

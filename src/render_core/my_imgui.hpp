@@ -1,10 +1,10 @@
 #pragma once
 
+#include "platforms/glfw_window.hpp"
 #include "render_core/my_frame_info.hpp"
 #include "render_core/my_renderer.hpp"
 #include "vulkan_core/device.hpp"
 #include "vulkan_core/my_descriptors.hpp"
-#include "vulkan_core/window.hpp"
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -15,7 +15,7 @@ namespace my {
 
 class ImGuiWrapper {
   public:
-    ImGuiWrapper(Device &device, Window &window, VkRenderPass renderPass);
+    ImGuiWrapper(Device &device, GlfwWindow &window, VkRenderPass renderPass);
     ~ImGuiWrapper();
 
     void newFrame();
@@ -25,7 +25,7 @@ class ImGuiWrapper {
   private:
     void init();
 
-    Window &myWindow;
+    GlfwWindow &myWindow;
     Device &myDevice;
     VkRenderPass myRenderPass;
 };

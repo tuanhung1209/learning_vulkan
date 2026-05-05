@@ -81,6 +81,7 @@ void Device::createInstance() {
 
     // wayland surface extensions
     extensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+    extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
@@ -263,7 +264,8 @@ std::vector<const char *> Device::getRequiredExtensions() {
     const char **glfwExtensions;
     glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-    std::vector<const char *> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+    std::vector<const char *> extensions;
+    if (glfwExtensionCount) { extensions.assign(glfwExtensions, glfwExtensions + glfwExtensionCount); }
 
     if (enableValidationLayers) { extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME); }
 

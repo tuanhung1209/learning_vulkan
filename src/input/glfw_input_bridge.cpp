@@ -4,10 +4,10 @@
 
 namespace my {
 
-GlfwInput::GlfwInput(Window &glfwWindow, InputState &inputState)
+GlfwInput::GlfwInput(GlfwWindow &glfwWindow, InputState &inputState)
     : window{glfwWindow}, inputState(inputState) {};
 
-void GlfwInput::pollKeyboardFromGlfw(Window &glfwWindow) {
+void GlfwInput::pollKeyboardFromGlfw(GlfwWindow &glfwWindow) {
     for (size_t k = 0; k < (size_t)InputState::Key::Count; k++) {
         int glfwKey = toGlfw[k];
         bool isPressed = (glfwGetKey(glfwWindow.getWindow(), glfwKey) == GLFW_PRESS);
@@ -21,7 +21,7 @@ void GlfwInput::pollKeyboardFromGlfw(Window &glfwWindow) {
     }
 }
 
-void GlfwInput::pollMouseFromGlfw(Window &glfwWindow) {
+void GlfwInput::pollMouseFromGlfw(GlfwWindow &glfwWindow) {
     double xpos, ypos;
     glfwGetCursorPos(glfwWindow.getWindow(), &xpos, &ypos);
     glm::vec2 curCursorPos{static_cast<float>(xpos), static_cast<float>(ypos)};

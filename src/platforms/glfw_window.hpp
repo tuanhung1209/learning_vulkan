@@ -7,18 +7,18 @@
 
 namespace my {
 
-class Window {
+class GlfwWindow {
   public:
-    Window(int w, int h, std::string name);
-    ~Window();
+    GlfwWindow(int w, int h, std::string name);
+    ~GlfwWindow();
 
-    Window(const Window &) = delete;
-    Window &operator=(const Window &) = delete;
+    GlfwWindow(const GlfwWindow &) = delete;
+    GlfwWindow &operator=(const GlfwWindow &) = delete;
 
     bool shouldClose() { return glfwWindowShouldClose(window); }
     VkExtent2D getExtend() { return {static_cast<uint32_t>(width), static_cast<uint32_t>(height)}; }
-    bool wasWindowResized() { return frameBufferResized; }
-    void resetWindowResizedFlag() { frameBufferResized = false; }
+    bool wasGlfwWindowResized() { return frameBufferResized; }
+    void resetGlfwWindowResizedFlag() { frameBufferResized = false; }
 
     void createWindowSurface(VkInstance instance, VkSurfaceKHR *surface);
     GLFWwindow *getWindow() const { return window; }

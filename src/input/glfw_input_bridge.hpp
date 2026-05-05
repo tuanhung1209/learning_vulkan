@@ -1,18 +1,18 @@
 #pragma once
 
 #include "input/input_state.hpp"
+#include "platforms/glfw_window.hpp"
 #include <GLFW/glfw3.h>
-#include <vulkan_core/window.hpp>
 
 namespace my {
 
 class GlfwInput {
   public:
-    GlfwInput(Window &glfwWindow, InputState &inputState);
+    GlfwInput(GlfwWindow &glfwWindow, InputState &inputState);
     ~GlfwInput() {};
 
-    void pollKeyboardFromGlfw(Window &glfwWindow);
-    void pollMouseFromGlfw(Window &glfwWindow);
+    void pollKeyboardFromGlfw(GlfwWindow &glfwWindow);
+    void pollMouseFromGlfw(GlfwWindow &glfwWindow);
 
   private:
     std::array<int, (size_t)InputState::Key::Count> toGlfw = {
@@ -30,7 +30,7 @@ class GlfwInput {
         GLFW_KEY_LEFT_ALT, // Key::ALT
     };
 
-    Window &window;
+    GlfwWindow &window;
     InputState &inputState;
     glm::vec2 lastCursorPos{0.0f};
     bool cursorVisible = true;

@@ -5,8 +5,8 @@
 #include "render_core/my_frame_info.hpp"
 #include "render_core/my_model.hpp"
 #include "vulkan_core/device.hpp"
-#include "vulkan_core/my_descriptors.hpp"
 #include "vulkan_core/graphic_pipeline.hpp"
+#include "vulkan_core/my_descriptors.hpp"
 #include "vulkan_core/swap_chain.hpp"
 
 #include <memory>
@@ -23,6 +23,8 @@ class SkyRenderSystem {
 
     void renderSky(FrameInfo &frameInfo);
     void updateUbo(FrameInfo &frameInfo, SkyUbo &skyUbo);
+
+    void drawGui(SkyUbo &skyUbo);
 
   private:
     void createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout);

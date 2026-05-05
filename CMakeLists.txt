@@ -14,7 +14,7 @@ pkg_check_modules(WAYLAND REQUIRED wayland-client)
 
 # ── Sources ───────────────────────────────────────────────────
 file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS src/*.cpp)
-file(GLOB WAYLAND_PROTOCOL_SOURCES CONFIGURE_DEPENDS src/platfroms/wayland/*-protocol.c)
+file(GLOB WAYLAND_PROTOCOL_SOURCES CONFIGURE_DEPENDS src/platforms/wayland/*-protocol.c)
 list(APPEND ENGINE_SOURCES ${WAYLAND_PROTOCOL_SOURCES})
 
 set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/lib/imgui)

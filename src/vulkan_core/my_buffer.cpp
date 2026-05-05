@@ -186,4 +186,3 @@ VkDescriptorBufferInfo MyBuffer::descriptorInfoForIndex(int index) {
 VkResult MyBuffer::invalidateIndex(int index) { return invalidate(alignmentSize, index * alignmentSize); }
 
 } // namespace my
-

@@ -9,7 +9,7 @@
 
 namespace my {
 
-ImGuiWrapper::ImGuiWrapper(Device &device, Window &window, VkRenderPass renderPass)
+ImGuiWrapper::ImGuiWrapper(Device &device, GlfwWindow &window, VkRenderPass renderPass)
     : myDevice{device}, myWindow{window}, myRenderPass(renderPass) {
     init();
 }

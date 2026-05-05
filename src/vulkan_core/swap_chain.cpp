@@ -164,6 +164,13 @@ void SwapChain::createSwapChain() {
 
     createInfo.oldSwapchain = oldSwapChain == nullptr ? VK_NULL_HANDLE : oldSwapChain->swapChain;
 
+    std::cout << "[SwapChain] format=" << surfaceFormat.format << " colorSpace=" << surfaceFormat.colorSpace
+              << " extent=" << extent.width << "x" << extent.height << " imageCount=" << imageCount
+              << " presentMode=" << presentMode << std::endl;
+    std::cout << "[SwapChain] available formats:" << std::endl;
+    for (const auto &f : swapChainSupport.formats) {
+        std::cout << "  format=" << f.format << " colorSpace=" << f.colorSpace << std::endl;
+    }
     if (vkCreateSwapchainKHR(device.device(), &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
     }
@@ -354,6 +361,9 @@ SwapChain::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availa
 
 VkPresentModeKHR
 SwapChain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes) {
+    // Force FIFO for wayland layer-shell — mailbox can cause issues
+    std::cout << "Present mode: V-Sync (forced)" << std::endl;
+    return VK_PRESENT_MODE_FIFO_KHR;
     for (const auto &availablePresentMode : availablePresentModes) {
         if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
             std::cout << "Present mode: Mailbox" << std::endl;
