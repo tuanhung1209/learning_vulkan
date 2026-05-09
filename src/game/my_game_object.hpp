@@ -75,12 +75,18 @@ class MyGameObject {
     using id_t = unsigned int;
     using Map = std::unordered_map<id_t, MyGameObject>;
 
-    static MyGameObject createGameObject() {
+    static id_t &nextIdRef() {
         static id_t currentId = 0;
-        return MyGameObject{currentId++};
+        return currentId;
     }
 
-    static MyGameObject createGameObjectWithId(id_t id) { return MyGameObject(id); }
+    static MyGameObject createGameObject() { return MyGameObject{nextIdRef()++}; }
+
+    static MyGameObject createGameObjectWithId(id_t id) {
+        auto &next = nextIdRef();
+        if (id >= next) next = id + 1;
+        return MyGameObject(id);
+    }
 
     static MyGameObject createPointLight(float intensity = 10.f, float radius = 0.1f,
                                          glm::vec3 color = glm::vec3(1.f));

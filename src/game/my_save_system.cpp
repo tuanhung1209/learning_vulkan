@@ -11,12 +11,23 @@ namespace my {
 SaveSystem::SaveSystem(Device &device) : myDevice{device} {};
 SaveSystem::~SaveSystem() {};
 
-void SaveSystem::saveScene(std::string saveFilePath, MyGameObject::Map &gameObjecs,
-                           TerrainGenerator::TerrainConfig &config, SkyUbo &skyUbo,
-                           GrassComputePush &grassPush) {
+void SaveSystem::saveScene(const std::string &saveFilePath, SceneEntityRef scene) {
+    json sceneJson;
+
+    // Player
+    if (scene.gameObjects.count(scene.playerId)) {
+        auto &p = scene.gameObjects.at(scene.playerId);
+        json playerJson;
+        playerJson["translation"] = {p.transform.translation.x, p.transform.translation.y,
+                                     p.transform.translation.z};
+        playerJson["rotation"] = {p.transform.rotation.x, p.transform.rotation.y, p.transform.rotation.z};
+        sceneJson["player"] = playerJson;
+    }
+
     // GameObjects
     json jsonGameObjectArray = json::array();
-    for (auto &kv : gameObjecs) {
+    for (auto &kv : scene.gameObjects) {
+        if (kv.first == scene.playerId) continue;
         auto &obj = kv.second;
 
         json jsonObj;
@@ -52,6 +63,7 @@ void SaveSystem::saveScene(std::string saveFilePath, MyGameObject::Map &gameObje
     sceneJson["gameObjects"] = jsonGameObjectArray;
 
     // Terrain
+    auto &config = scene.terrainConfig;
     json terrainJson;
     terrainJson["seed"] = config.seed;
     terrainJson["noiseScale"] = config.noiseScale;
@@ -67,17 +79,19 @@ void SaveSystem::saveScene(std::string saveFilePath, MyGameObject::Map &gameObje
     sceneJson["terrain"] = terrainJson;
 
     // Sky
+    auto &skyPush = scene.skyConfig;
     json skyJson;
-    skyJson["horizonColor"] = {skyUbo.horizonColor.x, skyUbo.horizonColor.y, skyUbo.horizonColor.z,
-                               skyUbo.horizonColor.w};
-    skyJson["skyColor"] = {skyUbo.skyColor.x, skyUbo.skyColor.y, skyUbo.skyColor.z, skyUbo.skyColor.w};
-    skyJson["skyTextureColor"] = {skyUbo.skyTextureColor.x, skyUbo.skyTextureColor.y,
-                                  skyUbo.skyTextureColor.z, skyUbo.skyTextureColor.w};
-    skyJson["sunDirection"] = {skyUbo.sunDirection.x, skyUbo.sunDirection.y, skyUbo.sunDirection.z,
-                               skyUbo.sunDirection.w};
+    skyJson["horizonColor"] = {skyPush.horizonColor.x, skyPush.horizonColor.y, skyPush.horizonColor.z,
+                               skyPush.horizonColor.w};
+    skyJson["skyColor"] = {skyPush.skyColor.x, skyPush.skyColor.y, skyPush.skyColor.z, skyPush.skyColor.w};
+    skyJson["skyTextureColor"] = {skyPush.skyTextureColor.x, skyPush.skyTextureColor.y,
+                                  skyPush.skyTextureColor.z, skyPush.skyTextureColor.w};
+    skyJson["sunDirection"] = {skyPush.sunDirection.x, skyPush.sunDirection.y, skyPush.sunDirection.z,
+                               skyPush.sunDirection.w};
     sceneJson["sky"] = skyJson;
 
     // Grass
+    auto &grassPush = scene.grassConfig;
     json grassJson;
     grassJson["gridSize"] = grassPush.gridSize;
     grassJson["terrainResolution"] = grassPush.terrainResolution;
@@ -104,11 +118,17 @@ void SaveSystem::saveScene(std::string saveFilePath, MyGameObject::Map &gameObje
     saveFile << sceneJson.dump(4);
 }
 
-void SaveSystem::loadScene(std::string loadFilePath, MyGameObject::Map &gameObjects,
-                           TerrainGenerator::TerrainConfig &config, SkyUbo &skyUbo,
-                           GrassComputePush &grassPush) {
+void SaveSystem::loadScene(const std::string &loadFilePath, SceneEntityRef scene) {
     std::ifstream loadFile(loadFilePath);
     json jsonScene = json::parse(loadFile);
+
+    // Player
+    if (jsonScene.contains("player")) {
+        auto &p = jsonScene["player"];
+        auto &playerTransform = scene.gameObjects.at(scene.playerId).transform;
+        playerTransform.translation = {p["translation"][0], p["translation"][1], p["translation"][2]};
+        playerTransform.rotation = {p["rotation"][0], p["rotation"][1], p["rotation"][2]};
+    }
 
     // GameObjects
     for (auto &oldObj : jsonScene["gameObjects"]) {
@@ -154,11 +174,12 @@ void SaveSystem::loadScene(std::string loadFilePath, MyGameObject::Map &gameObje
             obj.rigidBody->angularDamping = oldObj["rigidBody"]["angularDamping"];
         }
 
-        gameObjects.emplace(obj.getId(), std::move(obj));
+        scene.gameObjects.emplace(obj.getId(), std::move(obj));
     }
 
     // Terrain
     auto &terrainData = jsonScene["terrain"];
+    auto &config = scene.terrainConfig;
     config.seed = terrainData["seed"];
     config.noiseScale = terrainData["noiseScale"];
     config.octaves = terrainData["octaves"];
@@ -173,17 +194,19 @@ void SaveSystem::loadScene(std::string loadFilePath, MyGameObject::Map &gameObje
 
     // Sky
     auto &skyData = jsonScene["sky"];
-    skyUbo.horizonColor = {skyData["horizonColor"][0], skyData["horizonColor"][1], skyData["horizonColor"][2],
-                           skyData["horizonColor"][3]};
-    skyUbo.skyColor = {skyData["skyColor"][0], skyData["skyColor"][1], skyData["skyColor"][2],
-                       skyData["skyColor"][3]};
-    skyUbo.skyTextureColor = {skyData["skyTextureColor"][0], skyData["skyTextureColor"][1],
-                              skyData["skyTextureColor"][2], skyData["skyTextureColor"][3]};
-    skyUbo.sunDirection = {skyData["sunDirection"][0], skyData["sunDirection"][1], skyData["sunDirection"][2],
-                           skyData["sunDirection"][3]};
+    auto &skyPush = scene.skyConfig;
+    skyPush.horizonColor = {skyData["horizonColor"][0], skyData["horizonColor"][1],
+                            skyData["horizonColor"][2], skyData["horizonColor"][3]};
+    skyPush.skyColor = {skyData["skyColor"][0], skyData["skyColor"][1], skyData["skyColor"][2],
+                        skyData["skyColor"][3]};
+    skyPush.skyTextureColor = {skyData["skyTextureColor"][0], skyData["skyTextureColor"][1],
+                               skyData["skyTextureColor"][2], skyData["skyTextureColor"][3]};
+    skyPush.sunDirection = {skyData["sunDirection"][0], skyData["sunDirection"][1],
+                            skyData["sunDirection"][2], skyData["sunDirection"][3]};
 
     // Grass
     auto &grassData = jsonScene["grass"];
+    auto &grassPush = scene.grassConfig;
     grassPush.gridSize = grassData["gridSize"];
     grassPush.terrainResolution = grassData["terrainResolution"];
     grassPush.heightScale = grassData["heightScale"];

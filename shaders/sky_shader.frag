@@ -25,12 +25,12 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
 
-layout(set = 2, binding = 0) uniform SkyUbo{
+layout(push_constant) uniform Push {
     vec4 horizonColor;
     vec4 skyColor;
     vec4 skyTextureColor;
     vec4 sunDirection;
-} skyUbo;
+} push;
 
 float algebraicSigmoid(float x, float a, float b, float c) {
     return (a * x - b) / sqrt(c + pow(a * x - b, 2.0));
@@ -55,10 +55,10 @@ void main(){
     float horizonHandle = horizonCurve(texY, 0.005, 0.57);
 
     // sky gradient
-    vec3 skyColor = mix(skyUbo.horizonColor.rgb, skyUbo.skyColor.rgb, horizonHandle);
+    vec3 skyColor = mix(push.horizonColor.rgb, push.skyColor.rgb, horizonHandle);
 
     // sun
-    vec3 sunDir = normalize(skyUbo.sunDirection.xyz);
+    vec3 sunDir = normalize(push.sunDirection.xyz);
     float sunAngle = dot(dir, sunDir);
 
     // hard sun disc
@@ -78,7 +78,7 @@ void main(){
     skyColor += sunHaze * hazeColor * 0.15;
     skyColor *= texColor;
 
-    skyColor *= skyUbo.skyTextureColor.rgb;
+    skyColor *= push.skyTextureColor.rgb;
 
     outColor = vec4(skyColor, 1.0);
 }

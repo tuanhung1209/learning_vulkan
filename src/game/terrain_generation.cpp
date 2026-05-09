@@ -9,20 +9,11 @@ namespace my {
 
 TerrainGenerator::TerrainGenerator(Device &device) : myDevice{device} {}
 
-void TerrainGenerator::createTerrain(MyGameObject::Map &gameObjects, std::shared_ptr<MyModel> quadModel) {
+void TerrainGenerator::createTerrain(MyGameObject::Map &gameObjects) {
     int res = config.resolution;
     std::vector<uint8_t> noisePixels(res * res * 4);
     heightMap.resize(res * res);
     generateHeightMap(heightMap, noisePixels);
-
-    auto perlinViewer = MyGameObject::createGameObject();
-    perlinViewer.model = quadModel;
-    perlinViewer.transform.translation = {4.f, -2.f, 1.f};
-    perlinViewer.transform.scale = {2.f, 2.f, 2.f};
-    perlinViewer.transform.rotation = {0.f, glm::quarter_pi<float>(), glm::half_pi<float>()};
-    perlinViewer.texture = std::make_shared<MyTexture>(myDevice, res, res, noisePixels);
-    heightmapViewerId = perlinViewer.getId();
-    gameObjects.emplace(perlinViewer.getId(), std::move(perlinViewer));
 
     auto terrain = MyGameObject::createGameObject();
     terrain.model = generateMesh(heightMap, res, 1, config.heightScale);

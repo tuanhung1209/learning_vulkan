@@ -1,4 +1,4 @@
-#include "game/my_Player.hpp"
+#include "game/my_player.hpp"
 #include "input/input_state.hpp"
 
 namespace my {

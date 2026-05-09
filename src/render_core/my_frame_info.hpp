@@ -2,6 +2,7 @@
 #pragma once
 
 #include "game/my_game_object.hpp"
+#include "game/terrain_generation.hpp"
 #include "render_core/my_camera.hpp"
 
 namespace my {
@@ -32,13 +33,6 @@ struct GlobalUbo {
     float time{0.f};
 };
 
-struct SkyUbo {
-    alignas(16) glm::vec4 horizonColor{0.05f, 0.3f, 1.f, 1.f};
-    glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};
-    glm::vec4 skyTextureColor{0.941f, 0.322f, 0.875f, 1.0f};
-    glm::vec4 sunDirection{1.f, 0.f, 0.5f, 0.f};
-};
-
 struct FrameInfo {
     int frameIndex;
     float frameTime;
@@ -51,6 +45,13 @@ struct FrameInfo {
 struct SimplePushConstantData {
     glm::mat4 modelMatrix{1.f};
     glm::mat4 normalMatrix{1.f};
+};
+
+struct SkyPush {
+    alignas(16) glm::vec4 horizonColor{0.05f, 0.3f, 1.f, 1.f};
+    glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};
+    glm::vec4 skyTextureColor{0.941f, 0.322f, 0.875f, 1.0f};
+    glm::vec4 sunDirection{1.f, 0.f, 0.5f, 0.f};
 };
 
 struct GrassComputePush {
@@ -74,6 +75,14 @@ struct GrassComputePush {
     // Color
     alignas(16) glm::vec4 baseColor{0.02f, 0.18f, 0.01f, 1.0f};
     alignas(16) glm::vec4 tipColor{0.1f, 0.55f, 0.08f, 1.0f};
+};
+
+struct SceneEntityRef {
+    MyGameObject::Map &gameObjects;
+    MyGameObject::id_t playerId;
+    TerrainGenerator::TerrainConfig &terrainConfig;
+    SkyPush &skyConfig;
+    GrassComputePush &grassConfig;
 };
 
 } // namespace my

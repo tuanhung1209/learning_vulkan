@@ -34,6 +34,8 @@ void ImGuiWrapper::renderGui(FrameInfo &frameInfo) {
 void ImGuiWrapper::init() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     ImGui_ImplGlfw_InitForVulkan(myWindow.getWindow(), true);
 

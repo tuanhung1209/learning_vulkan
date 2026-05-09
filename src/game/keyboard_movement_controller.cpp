@@ -15,9 +15,11 @@ void KeyboardMovementController::moveInPlaneXZ(const InputState &input, float dt
         gameObject.transform.rotation += rotationSpeed * dt * glm::normalize(rotate);
     }
 
+    /*
     glm::vec2 mouseDelta = input.getMouseDelta();
     gameObject.transform.rotation.y += mouseSensitivity * mouseDelta.x;
     gameObject.transform.rotation.x -= mouseSensitivity * mouseDelta.y;
+    */
 
     gameObject.transform.rotation.x = glm::clamp(gameObject.transform.rotation.x, -1.5f, 1.5f);
     gameObject.transform.rotation.y = glm::mod(gameObject.transform.rotation.y, glm::two_pi<float>());

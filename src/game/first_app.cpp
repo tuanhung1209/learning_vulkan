@@ -1,7 +1,8 @@
 #include "game/first_app.hpp"
 #include "game/keyboard_movement_controller.hpp"
-#include "game/my_Player.hpp"
+#include "game/my_player.hpp"
 #include "game/physics_utils.hpp"
+#include "game/scene_file_panel.hpp"
 #include "game/terrain_generation.hpp"
 #include "imgui.h"
 #include "input/glfw_input_bridge.hpp"
@@ -96,6 +97,7 @@ void FirstApp::run() {
                                     globalSetLayout->getDescriptorSetLayout()};
     GrassRenderSystem grassRenderSystem{*device, myRenderer->getSwapChainRenderPass(),
                                         globalSetLayout->getDescriptorSetLayout()};
+    TerrainGenerator terrainGen{*device};
 
     std::unique_ptr<ImGuiWrapper> guiRenderSystem;
     if (mode_ == Mode::Edit) {
@@ -103,34 +105,33 @@ void FirstApp::run() {
             std::make_unique<ImGuiWrapper>(*device, *glfwWindow, myRenderer->getSwapChainRenderPass());
     }
 
-    SkyUbo skyUbo{};
-
     SaveSystem saveSystem{*device};
-    std::string droppedFile;
-    static char buffer[128];
-
-    TerrainGenerator terrainGen{*device};
-    std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(*device, "assets/models/quad.obj");
-    terrainGen.createTerrain(gameObjects, quadModel);
-
-    bool shouldRegenerateTerrain = false;
-    grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(), terrainGen.config.heightScale);
-
-    MyCamera camera{};
-    camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
+    SceneFilePanel sceneFilePanel{};
 
     std::shared_ptr<MyModel> bulletModel = MyModel::createModelFromFile(*device, "assets/models/cube.obj");
     BulletHandler bulletHandler{bulletModel};
 
-    auto playerObject = MyGameObject::createGameObject();
-    playerObject.transform.translation = glm::vec3(1.f, -100.f, -40.f);
     InputState inputState{};
     std::unique_ptr<GlfwInput> glfwInput;
     if (mode_ == Mode::Edit) { glfwInput = std::make_unique<GlfwInput>(*glfwWindow, inputState); }
-    MyPlayer mainPlayer{camera, playerObject.getId(), inputState};
-    gameObjects.emplace(playerObject.getId(), std::move(playerObject));
+
+    MyCamera camera{};
+    camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
+
+    auto playerObject = MyGameObject::createGameObject();
+    auto playerId = playerObject.getId();
+    gameObjects.emplace(playerId, std::move(playerObject));
+    MyPlayer mainPlayer{camera, playerId, inputState};
 
     PhysicsWorld physicsWorld;
+
+    SceneEntityRef sceneRef{gameObjects, playerId, terrainGen.config, skyRenderSystem.getPush(),
+                            grassRenderSystem.getPush()};
+
+    saveSystem.loadScene("assets/scenes/save2.json", sceneRef);
+    terrainGen.createTerrain(gameObjects);
+    grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(), terrainGen.config.heightScale);
+
     auto currentTime = std::chrono::high_resolution_clock::now();
     float totalTime = 0.f;
 
@@ -139,10 +140,8 @@ void FirstApp::run() {
             waylandWindow->pollEvents();
         } else {
             glfwPollEvents();
-            if (glfwInput) {
-                glfwInput->pollKeyboardFromGlfw(*glfwWindow);
-                glfwInput->pollMouseFromGlfw(*glfwWindow);
-            }
+            glfwInput->pollKeyboardFromGlfw(*glfwWindow);
+            glfwInput->pollMouseFromGlfw(*glfwWindow);
         }
 
         auto newTime = std::chrono::high_resolution_clock::now();
@@ -150,13 +149,6 @@ void FirstApp::run() {
             std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
         currentTime = newTime;
         totalTime += frameTime;
-
-        if (shouldRegenerateTerrain) {
-            vkDeviceWaitIdle(device->device());
-            terrainGen.regenerate(gameObjects);
-            grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(), terrainGen.config.heightScale);
-            shouldRegenerateTerrain = false;
-        }
 
         mainPlayer.update(inputState, frameTime, gameObjects, bulletHandler);
         bulletHandler.update(frameTime);
@@ -172,42 +164,35 @@ void FirstApp::run() {
 
             if (guiRenderSystem) {
                 guiRenderSystem->newFrame();
-                ImGui::Begin("Game");
-                ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-                ImGui::InputText("save file", buffer, IM_ARRAYSIZE(buffer),
-                                 ImGuiInputTextFlags_EnterReturnsTrue);
-                if (ImGui::Button("save")) {
-                    std::string savePath = "assets/scenes/" + std::string(buffer) + ".json";
-                    saveSystem.saveScene(savePath, gameObjects, terrainGen.config, skyUbo,
-                                         grassRenderSystem.getPush());
-                };
+                ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(),
+                                             ImGuiDockNodeFlags_PassthruCentralNode);
 
-                if (glfwWindow && glfwWindow->hasDroppedFile()) {
-                    droppedFile = glfwWindow->consumeDroppedFile();
+                auto event = sceneFilePanel.drawGui(*glfwWindow);
+                if (event.savePath) { saveSystem.saveScene(*event.savePath, sceneRef); }
+                if (event.loadPath) {
+                    vkDeviceWaitIdle(device->device());
+                    gameObjects.clear();
+
+                    auto newPlayer = MyGameObject::createGameObject();
+                    sceneRef.playerId = newPlayer.getId();
+                    gameObjects.emplace(sceneRef.playerId, std::move(newPlayer));
+                    mainPlayer.setPlayerId(sceneRef.playerId);
+
+                    saveSystem.loadScene(*event.loadPath, sceneRef);
+                    terrainGen.createTerrain(gameObjects);
+                    grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(),
+                                                      terrainGen.config.heightScale);
                 }
 
-                if (!droppedFile.empty()) {
-                    ImGui::Text("File: %s", droppedFile.c_str());
-                    if (ImGui::Button("Load")) {
-                        vkDeviceWaitIdle(device->device());
-                        gameObjects.clear();
-                        saveSystem.loadScene(droppedFile, gameObjects, terrainGen.config, skyUbo,
-                                             grassRenderSystem.getPush());
-
-                        // Re-create the player object after loading
-                        auto newPlayer = MyGameObject::createGameObject();
-                        mainPlayer.setPlayerId(newPlayer.getId());
-                        gameObjects.emplace(newPlayer.getId(), std::move(newPlayer));
-
-                        shouldRegenerateTerrain = true;
-                        droppedFile.clear();
-                    }
+                if (terrainGen.drawGui()) {
+                    vkDeviceWaitIdle(device->device());
+                    terrainGen.regenerate(gameObjects);
+                    grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(),
+                                                      terrainGen.config.heightScale);
                 }
-                ImGui::End();
 
-                if (terrainGen.drawGui()) { shouldRegenerateTerrain = true; }
                 grassRenderSystem.drawGui(terrainGen.config.heightScale);
-                skyRenderSystem.drawGui(skyUbo);
+                skyRenderSystem.drawGui();
             }
 
             // line below to update descriptorInfo
@@ -217,10 +202,9 @@ void FirstApp::run() {
             ubo.view = camera.getView();
             ubo.inverseView = camera.getInverseView();
 
-            ubo.fogColor = skyUbo.horizonColor;
+            ubo.fogColor = skyRenderSystem.getPush().horizonColor;
             ubo.time = totalTime;
 
-            skyRenderSystem.updateUbo(frameInfo, skyUbo);
             PointLightSystem.update(frameInfo, ubo);
 
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
@@ -231,10 +215,10 @@ void FirstApp::run() {
 
             // line below to render
             myRenderer->beginSwapChainRenderPass(commandBuffer);
+
             skyRenderSystem.renderSky(frameInfo);
             simpleRenderSystem.renderGameObjects(frameInfo);
             bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getGraphicPipelineLayout());
-
             grassRenderSystem.renderGrass(frameInfo);
             PointLightSystem.renderLight(frameInfo);
 
@@ -289,9 +273,9 @@ void FirstApp::loadGameObjects() {
     gameObjects.emplace(flat_vase.getId(), std::move(flat_vase));
 
     auto sphere = MyGameObject::createGameObject();
-    sphere.modelFilePath = "assets/models/flat_vase.obj";
+    sphere.modelFilePath = "assets/models/sphere.obj";
     sphere.model = sphereModel;
-    sphere.transform.translation = {1.5f, 0.f, 2.f};
+    sphere.transform.translation = {1.5f, -4.f, 2.f};
     sphere.transform.scale = {5.f, 5.f, 5.f};
     gameObjects.emplace(sphere.getId(), std::move(sphere));
 

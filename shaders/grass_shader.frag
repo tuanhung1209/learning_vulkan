@@ -32,14 +32,10 @@ void main() {
     vec3 ambient = ubo.ambientLightColor.xyz * ubo.ambientLightColor.w;
     vec3 diffuse = vec3(1.0) * NdotL * 0.8;
 
-    // AO at base
-    vec3 aoColor = vec3(0.01, 0.05, 0.005);
-    vec3 ao = mix(aoColor, vec3(1.0), fragHeightFactor);
+    // AO darkens the base; tip is fully lit
+    float ao = mix(0.05, 1.0, fragHeightFactor);
 
-    // Tip brightening
-    vec3 tipBoost = vec3(0.15, 0.2, 0.05) * fragHeightFactor * fragHeightFactor;
-
-    vec3 grassColor = (fragColor + tipBoost) * ao * (ambient + diffuse);
+    vec3 grassColor = fragColor * ao * (ambient + diffuse);
 
     // Fog
     vec3 cameraPosWorld = ubo.inverseView[3].xyz;

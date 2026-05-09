@@ -22,16 +22,15 @@ class SkyRenderSystem {
     SkyRenderSystem &operator=(const SkyRenderSystem &) = delete;
 
     void renderSky(FrameInfo &frameInfo);
-    void updateUbo(FrameInfo &frameInfo, SkyUbo &skyUbo);
+    SkyPush &getPush() { return push; }
 
-    void drawGui(SkyUbo &skyUbo);
+    void drawGui();
 
   private:
     void createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout);
     void createGraphicPipeline(VkRenderPass renderPass);
     void createSkyTexturePoolAndSetLayout();
-    void createSkyUboPoolAndSetLayout();
-    VkDescriptorSet createSkyDescriptorSet(MyTexture &tex);
+    VkDescriptorSet createSkyTextureDescriptorSet(MyTexture &tex);
 
     std::shared_ptr<MyTexture> skyTexture;
     Device &myDevice;
@@ -40,11 +39,7 @@ class SkyRenderSystem {
     std::unique_ptr<MyDescriptorSetLayout> skyTextureSetLayout;
     VkDescriptorSet skyTextureDescriptorSet;
 
-    std::unique_ptr<MyDescriptorPool> skyUboPool;
-    std::unique_ptr<MyDescriptorSetLayout> skyUboSetLayout;
-    std::vector<std::unique_ptr<MyBuffer>> skyUboBuffers;
-    std::vector<VkDescriptorSet> skyUboDescriptorSet;
-
+    SkyPush push{};
     std::shared_ptr<MyModel> skyModel;
     std::unique_ptr<GraphicPipeline> myGraphicPipeline;
     VkPipelineLayout graphicPipelineLayout;

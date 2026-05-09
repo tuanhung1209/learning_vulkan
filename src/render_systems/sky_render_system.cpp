@@ -20,39 +20,12 @@ SkyRenderSystem::SkyRenderSystem(Device &device, VkRenderPass renderPass,
     : myDevice{device} {
     skyModel = MyModel::createModelFromFile(myDevice, "assets/models/sphere.obj");
     createSkyTexturePoolAndSetLayout();
-    createSkyUboPoolAndSetLayout();
+
     createGraphicPipelineLayout(globalSetLayout);
     createGraphicPipeline(renderPass);
 }
 SkyRenderSystem::~SkyRenderSystem() {
     vkDestroyPipelineLayout(myDevice.device(), graphicPipelineLayout, nullptr);
-}
-
-void SkyRenderSystem::createSkyUboPoolAndSetLayout() {
-    skyUboBuffers.resize(SwapChain::MAX_FRAMES_IN_FLIGHT);
-    for (int i = 0; i < skyUboBuffers.size(); i++) {
-        skyUboBuffers[i] =
-            std::make_unique<MyBuffer>(myDevice, sizeof(SkyUbo), 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        skyUboBuffers[i]->map();
-    }
-
-    skyUboPool = MyDescriptorPool::Builder(myDevice)
-                     .setMaxSets(SwapChain::MAX_FRAMES_IN_FLIGHT)
-                     .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SwapChain::MAX_FRAMES_IN_FLIGHT)
-                     .build();
-
-    skyUboSetLayout = MyDescriptorSetLayout::Builder(myDevice)
-                          .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
-                          .build();
-
-    skyUboDescriptorSet.resize(SwapChain::MAX_FRAMES_IN_FLIGHT);
-    for (int i = 0; i < skyUboDescriptorSet.size(); i++) {
-        auto bufferInfo = skyUboBuffers[i]->descriptorInfo();
-        MyDescriptorWriter(*skyUboSetLayout, *skyUboPool)
-            .writeBuffer(0, &bufferInfo)
-            .build(skyUboDescriptorSet[i]);
-    }
 }
 
 void SkyRenderSystem::createSkyTexturePoolAndSetLayout() {
@@ -67,10 +40,10 @@ void SkyRenderSystem::createSkyTexturePoolAndSetLayout() {
             .build();
 
     skyTexture = std::make_shared<MyTexture>(myDevice, "assets/textures/sky_texture.png");
-    skyTextureDescriptorSet = createSkyDescriptorSet(*skyTexture);
+    skyTextureDescriptorSet = createSkyTextureDescriptorSet(*skyTexture);
 }
 
-VkDescriptorSet SkyRenderSystem ::createSkyDescriptorSet(MyTexture &tex) {
+VkDescriptorSet SkyRenderSystem ::createSkyTextureDescriptorSet(MyTexture &tex) {
     VkDescriptorImageInfo imageInfo{};
     imageInfo.sampler = tex.getTextureSampler();
     imageInfo.imageView = tex.getTextureImageView();
@@ -83,14 +56,20 @@ VkDescriptorSet SkyRenderSystem ::createSkyDescriptorSet(MyTexture &tex) {
 }
 
 void SkyRenderSystem::createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(SkyPush);
+
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalSetLayout,
-                                                            skyTextureSetLayout->getDescriptorSetLayout(),
-                                                            skyUboSetLayout->getDescriptorSetLayout()};
+                                                            skyTextureSetLayout->getDescriptorSetLayout()};
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     if (vkCreatePipelineLayout(myDevice.device(), &pipelineLayoutInfo, nullptr, &graphicPipelineLayout) !=
         VK_SUCCESS) {
@@ -114,31 +93,26 @@ void SkyRenderSystem::createGraphicPipeline(VkRenderPass renderPass) {
                                                           "shaders/sky_shader.frag.spv", pipelineConfig);
 }
 
-void SkyRenderSystem::drawGui(SkyUbo &skyUbo) {
+void SkyRenderSystem::drawGui() {
     ImGui::Begin("Sky");
-    ImGui::ColorPicker4("Horizon Color", &skyUbo.horizonColor.x);
-    ImGui::ColorPicker4("Sky Color", &skyUbo.skyColor.x);
-    ImGui::ColorPicker4("Sky TColor", &skyUbo.skyTextureColor.x);
-    ImGui::SliderFloat3("Sun Direction", &skyUbo.sunDirection.x, -1.f, 1.f);
+    ImGui::ColorPicker4("Horizon Color", &push.horizonColor.x);
+    ImGui::ColorPicker4("Sky Color", &push.skyColor.x);
+    ImGui::ColorPicker4("Sky TColor", &push.skyTextureColor.x);
+    ImGui::SliderFloat3("Sun Direction", &push.sunDirection.x, -1.f, 1.f);
     ImGui::End();
-}
-
-void SkyRenderSystem::updateUbo(FrameInfo &frameInfo, SkyUbo &skyUbo) {
-    skyUboBuffers[frameInfo.frameIndex]->writeToBuffer(&skyUbo);
-    skyUboBuffers[frameInfo.frameIndex]->flush();
 }
 
 void SkyRenderSystem::renderSky(FrameInfo &frameInfo) {
     myGraphicPipeline->bind(frameInfo.commandBuffer);
+
+    vkCmdPushConstants(frameInfo.commandBuffer, graphicPipelineLayout,
+                       VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(SkyPush), &push);
 
     vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout,
                             0, 1, &frameInfo.globalDescriptorSet, 0, nullptr);
 
     vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout,
                             1, 1, &skyTextureDescriptorSet, 0, nullptr);
-
-    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout,
-                            2, 1, &skyUboDescriptorSet[frameInfo.frameIndex], 0, nullptr);
 
     skyModel->bind(frameInfo.commandBuffer);
     skyModel->draw(frameInfo.commandBuffer);

@@ -29,7 +29,7 @@ class TerrainGenerator {
 
     TerrainGenerator(Device &device);
 
-    void createTerrain(MyGameObject::Map &gameObjects, std::shared_ptr<MyModel> quadModel);
+    void createTerrain(MyGameObject::Map &gameObjects);
 
     void regenerate(MyGameObject::Map &gameObjects);
 

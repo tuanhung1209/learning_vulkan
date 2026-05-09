@@ -1,10 +1,9 @@
 #pragma once
 
-#include "first_app.hpp"
 #include "render_core/my_frame_info.hpp"
-#include "terrain_generation.hpp"
+#include "vulkan_core/device.hpp"
 
-#include "lib/json.hpp"
+#include <string>
 
 namespace my {
 
@@ -13,13 +12,10 @@ class SaveSystem {
     SaveSystem(Device &device);
     ~SaveSystem();
 
-    void saveScene(std::string saveFilePath, MyGameObject::Map &gameObjecs,
-                   TerrainGenerator::TerrainConfig &config, SkyUbo &skyUbo, GrassComputePush &grassPush);
-    void loadScene(std::string loadFilePath, MyGameObject::Map &gameObjects,
-                   TerrainGenerator::TerrainConfig &config, SkyUbo &skyUbo, GrassComputePush &grassPush);
+    void saveScene(const std::string &saveFilePath, SceneEntityRef scene);
+    void loadScene(const std::string &loadFilePath, SceneEntityRef scene);
 
   private:
-    nlohmann::json sceneJson;
     Device &myDevice;
 };
 
