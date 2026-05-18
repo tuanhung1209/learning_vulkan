@@ -89,20 +89,20 @@ void FirstApp::run() {
             .build(globalDescriptorSet[i]);
     }
 
-    SimpleRenderSystem simpleRenderSystem{*device, myRenderer->getSwapChainRenderPass(),
+    SimpleRenderSystem simpleRenderSystem{*device, myRenderer->getSceneRenderPass(),
                                           globalSetLayout->getDescriptorSetLayout()};
-    PointLightSystem PointLightSystem{*device, myRenderer->getSwapChainRenderPass(),
+    PointLightSystem PointLightSystem{*device, myRenderer->getSceneRenderPass(),
                                       globalSetLayout->getDescriptorSetLayout()};
-    SkyRenderSystem skyRenderSystem{*device, myRenderer->getSwapChainRenderPass(),
+    SkyRenderSystem skyRenderSystem{*device, myRenderer->getSceneRenderPass(),
                                     globalSetLayout->getDescriptorSetLayout()};
-    GrassRenderSystem grassRenderSystem{*device, myRenderer->getSwapChainRenderPass(),
+    GrassRenderSystem grassRenderSystem{*device, myRenderer->getSceneRenderPass(),
                                         globalSetLayout->getDescriptorSetLayout()};
     TerrainGenerator terrainGen{*device};
 
     std::unique_ptr<ImGuiWrapper> guiRenderSystem;
     if (mode_ == Mode::Edit) {
         guiRenderSystem =
-            std::make_unique<ImGuiWrapper>(*device, *glfwWindow, myRenderer->getSwapChainRenderPass());
+            std::make_unique<ImGuiWrapper>(*device, *glfwWindow, myRenderer->getSceneRenderPass());
     }
 
     SaveSystem saveSystem{*device};
