@@ -1,5 +1,6 @@
 #pragma once
 
+#include "platforms/display_provider.hpp"
 #include <cstdint>
 #include <sys/types.h>
 #include <vector>
@@ -16,7 +17,7 @@
 
 namespace my {
 
-class WaylandWindow {
+class WaylandWindow : public DisplayProvider {
   public:
     WaylandWindow(std::string name);
     ~WaylandWindow();
@@ -24,17 +25,17 @@ class WaylandWindow {
     WaylandWindow(const WaylandWindow &) = delete;
     WaylandWindow &operator=(const WaylandWindow &) = delete;
 
-    bool shouldClose() const { return isClose; }
-    void pollEvents();
-    VkExtent2D getExtent() const { return {monitors[0].width, monitors[0].height}; }
+    std::vector<MonitorTarget> getMonitorTarget() override;
+    void waitEvents() override { pollEvents(); };
+    void pollEvents() override;
+    bool shouldClose() override { return isClose; };
 
     struct Monitor {
         wl_output *output{};
         wl_surface *surface{};
         zwlr_layer_surface_v1 *layerSurface{};
         VkSurfaceKHR vkSurface{};
-        uint32_t width{};
-        uint32_t height{};
+        VkExtent2D vkExtent{};
         bool configured = false;
         WaylandWindow *parent = nullptr;
     };
@@ -44,10 +45,14 @@ class WaylandWindow {
 
     // static std::vector<const char *> getRequiredInstanceExtensions();
     const std::vector<Monitor> &getMonitor() const { return monitors; }
+    const VkExtent2D getExtent() const { return monitors[0].vkExtent; }
 
   private:
     std::string name;
     bool isClose = false;
+
+    std::vector<Monitor> monitors;
+    void setUpLayerSurface();
 
     // listener
     void initRegistryListener();
@@ -58,9 +63,6 @@ class WaylandWindow {
     wl_registry *registry{};
     wl_compositor *compositor{};
     zwlr_layer_shell_v1 *layerShell{};
-    std::vector<Monitor> monitors;
-
-    void setUpLayerSurface();
 
     void handleRegistryGlobal(wl_registry *reg, uint32_t name, const char *iface, uint32_t version);
     void handleLayerConfigure(Monitor *m, zwlr_layer_surface_v1 *layerSurface, uint32_t serial, uint32_t w,

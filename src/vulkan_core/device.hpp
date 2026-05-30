@@ -45,9 +45,13 @@ class Device {
     VkQueue graphicsQueue() { return graphicsQueue_; }
     VkQueue presentQueue() { return presentQueue_; }
 
-    SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevice); }
+    SwapChainSupportDetails getSwapChainSupport(VkSurfaceKHR surface) {
+        return querySwapChainSupport(physicalDevice, surface);
+    }
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-    QueueFamilyIndices findPhysicalQueueFamilies() { return findQueueFamilies(physicalDevice); }
+    QueueFamilyIndices findPhysicalQueueFamilies(VkSurfaceKHR surface) {
+        return findQueueFamilies(physicalDevice, surface);
+    }
     VkFormat findSupportedFormat(const std::vector<VkFormat> &candidates, VkImageTiling tiling,
                                  VkFormatFeatureFlags features);
 
@@ -72,23 +76,24 @@ class Device {
 
     VkInstance const getInstance() { return instance; }
     VkPhysicalDevice const getPhysicaldevice() { return physicalDevice; }
+    VkSurfaceKHR const getVkSurface() { return surface_; }
 
   private:
     void createInstance();
     void setupDebugMessenger();
-    void pickPhysicalDevice();
+    void pickPhysicalDevice(VkSurfaceKHR surface);
     void createLogicalDevice();
     void createCommandPool();
 
     // helper functions
-    bool isDeviceSuitable(VkPhysicalDevice device);
+    bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
     std::vector<const char *> getRequiredExtensions();
     bool checkValidationLayerSupport();
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
     void hasGflwRequiredInstanceExtensions();
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugMessenger;

@@ -6,14 +6,16 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace my {
+
 class SwapChain {
   public:
     static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
-
-    SwapChain(Device &deviceRef, VkExtent2D windowExtent);
-    SwapChain(Device &deviceRef, VkExtent2D windowExtent, std::shared_ptr<SwapChain> previous);
+    SwapChain(Device &deviceRef, VkExtent2D windowExtent, VkSurfaceKHR &vkSurface);
+    SwapChain(Device &deviceRef, VkExtent2D windowExtent, VkSurfaceKHR &vkSurface,
+              std::shared_ptr<SwapChain> previous);
     ~SwapChain();
 
     SwapChain(const SwapChain &) = delete;
@@ -22,15 +24,18 @@ class SwapChain {
     size_t imageCount() { return swapChainImages.size(); }
     VkFormat getSwapChainImageFormat() { return swapChainImageFormat; }
     VkExtent2D getSwapChainExtent() { return swapChainExtent; }
+    VkImage getSwapChainImage(int i) { return swapChainImages[i]; }
+
+    VkSemaphore getImageAvailableSemaphore(int frame) { return imageAvailableSemaphores[frame]; }
+    VkSemaphore getRenderFinishedSemaphore(int frame) { return renderFinishedSemaphores[frame]; }
+
     uint32_t width() { return swapChainExtent.width; }
     uint32_t height() { return swapChainExtent.height; }
 
-    VkResult acquireNextImage(uint32_t *imageIndex);
-    VkResult submitCommandBuffers(const VkCommandBuffer *buffers, uint32_t *imageIndex);
+    VkResult acquireNextImage(uint32_t *imageIndex, int frame);
+    VkResult present(VkQueue queue, VkSemaphore waitSem, uint32_t imageIndex);
 
     bool compareSwapChain(const SwapChain &sc) { return sc.swapChainImageFormat == swapChainImageFormat; }
-
-    VkImage getSwapChainImage(int i) { return swapChainImages[i]; }
 
   private:
     void init();
@@ -48,16 +53,14 @@ class SwapChain {
     std::vector<VkImage> swapChainImages;
 
     Device &device;
-    VkExtent2D windowExtent;
+    VkSurfaceKHR &vkSurface_;
+    VkExtent2D windowExtent{};
 
     VkSwapchainKHR swapChain;
     std::shared_ptr<SwapChain> oldSwapChain;
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
-    std::vector<VkFence> inFlightFences;
-    std::vector<VkFence> imagesInFlight;
-    size_t currentFrame = 0;
 };
 
 } // namespace my

@@ -1,7 +1,9 @@
 #include "wayland_window.hpp"
 
 #include <cassert>
+
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -57,6 +59,13 @@ WaylandWindow::~WaylandWindow() {
     if (compositor) wl_compositor_destroy(compositor);
     if (registry) wl_registry_destroy(registry);
     if (display) wl_display_disconnect(display);
+}
+
+std::vector<MonitorTarget> WaylandWindow::getMonitorTarget() {
+    std::vector<MonitorTarget> monitorsOut;
+    monitorsOut.reserve(monitors.size());
+    for (auto &m : monitors) { monitorsOut.push_back({m.vkSurface, m.vkExtent}); }
+    return monitorsOut;
 }
 
 void WaylandWindow::pollEvents() {
@@ -122,8 +131,8 @@ void WaylandWindow::handleRegistryGlobal(wl_registry *reg, uint32_t name, const 
 
 void WaylandWindow::handleLayerConfigure(Monitor *m, zwlr_layer_surface_v1 *layerSurface, uint32_t serial,
                                          uint32_t w, uint32_t h) {
-    m->width = w;
-    m->height = h;
+    m->vkExtent.width = w;
+    m->vkExtent.height = h;
     m->configured = true;
     zwlr_layer_surface_v1_ack_configure(layerSurface, serial);
 }

@@ -43,7 +43,8 @@ void ImGuiWrapper::init() {
     init_info.Instance = myDevice.getInstance();
     init_info.PhysicalDevice = myDevice.getPhysicaldevice();
     init_info.Device = myDevice.device();
-    init_info.QueueFamily = myDevice.findPhysicalQueueFamilies().graphicsFamily;
+    // TODO: cache graphics queue family on Device so ImGui (graphics-only) needn't pass a surface
+    init_info.QueueFamily = myDevice.findPhysicalQueueFamilies(myDevice.getVkSurface()).graphicsFamily;
     init_info.Queue = myDevice.graphicsQueue();
     init_info.DescriptorPoolSize = 100;
     init_info.MinImageCount = 2;

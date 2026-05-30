@@ -1,5 +1,6 @@
 #pragma once
 
+#include "platforms/display_provider.hpp"
 #include "vulkan_core/device.hpp"
 #include "vulkan_core/render_target.hpp"
 #include "vulkan_core/swap_chain.hpp"
@@ -14,7 +15,7 @@ namespace my {
 
 class MyRenderer {
   public:
-    MyRenderer(std::function<VkExtent2D()> getExtent, std::function<void()> waitEvents, Device &device);
+    MyRenderer(DisplayProvider &provider, Device &device);
     ~MyRenderer();
 
     MyRenderer(const MyRenderer &) = delete;
@@ -24,6 +25,7 @@ class MyRenderer {
     float getAspectRatio() { return renderTarget->extentAspectRatio(); }
 
     bool isFrameInProgress() const { return isFrameStarted; }
+
     VkCommandBuffer getCurrentCommandBuffer() const {
         assert(isFrameStarted && "cannot get framebuffer when frame not in progress");
         return commandBuffers[currentFrameIndex];
@@ -42,24 +44,24 @@ class MyRenderer {
   private:
     void createCommandBuffers();
     void freeCommandBuffers();
-    void recreateSwapChain();
+    void recreateSwapChains();
     void createRenderTarget();
+    void createSyncObjects();
 
-    void blitToSwapChain(VkCommandBuffer cb);
+    void blitToSwapChains(VkCommandBuffer cb);
 
-    std::function<VkExtent2D()> getExtentFn;
-    std::function<void()> waitEventsFn;
-    Device &myDevice;
-    // currently using mailbox not vsync(fifo) will change if run into error
-    // use pointer to easily delete and recreate for window resize
+    DisplayProvider &displayProvider_;
+    Device &myDevice_;
 
+    std::vector<std::unique_ptr<SwapChain>> swapChains;
     std::unique_ptr<RenderTarget> renderTarget;
-    std::unique_ptr<SwapChain> mySwapChain;
     std::vector<VkCommandBuffer> commandBuffers;
 
-    uint32_t currentImageIndex;
-    int currentFrameIndex{0};
     bool isFrameStarted{false};
+
+    std::vector<VkFence> inFlightFences{};
+    std::vector<uint32_t> currentImageIndex{};
+    size_t currentFrameIndex = 0;
 };
 
 } // namespace my

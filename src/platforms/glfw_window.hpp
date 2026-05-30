@@ -1,5 +1,8 @@
 #pragma once
 
+#include "platforms/display_provider.hpp"
+#include <vulkan/vulkan_core.h>
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <string>
@@ -7,28 +10,35 @@
 
 namespace my {
 
-class GlfwWindow {
+class GlfwWindow : public DisplayProvider {
   public:
     GlfwWindow(int w, int h, std::string name);
+    // have to put destroy somewhere else
     ~GlfwWindow();
 
     GlfwWindow(const GlfwWindow &) = delete;
     GlfwWindow &operator=(const GlfwWindow &) = delete;
 
-    bool shouldClose() { return glfwWindowShouldClose(window); }
-    VkExtent2D getExtend() { return {static_cast<uint32_t>(width), static_cast<uint32_t>(height)}; }
-    bool wasGlfwWindowResized() { return frameBufferResized; }
-    void resetGlfwWindowResizedFlag() { frameBufferResized = false; }
+    std::vector<MonitorTarget> getMonitorTarget() override { return {{surface_, getExtent()}}; }
+    void waitEvents() override { glfwWaitEvents(); }
+    void pollEvents() override { glfwPollEvents(); }
+    bool shouldClose() override { return glfwWindowShouldClose(window); }
 
-    void createWindowSurface(VkInstance instance, VkSurfaceKHR *surface);
+    VkExtent2D getExtent() const { return {static_cast<uint32_t>(width), static_cast<uint32_t>(height)}; }
+    bool wasGlfwWindowResized() const { return frameBufferResized; }
     GLFWwindow *getWindow() const { return window; }
-
+    VkSurfaceKHR getVkSurface() const { return surface_; }
     bool hasDroppedFile() const { return !droppedFilePath.empty(); }
+
     std::string consumeDroppedFile() {
         std::string path = droppedFilePath;
         droppedFilePath.clear();
         return path;
     }
+
+    void resetGlfwWindowResizedFlag() { frameBufferResized = false; }
+    void createVulkanSurface(VkInstance instance);
+    void destroyVulkanSurfaces(VkInstance instance);
 
   private:
     static void frameBufferResizeCallback(GLFWwindow *window, int width, int height);
@@ -42,6 +52,7 @@ class GlfwWindow {
 
     std::string windowName;
     GLFWwindow *window;
+    VkSurfaceKHR surface_ = VK_NULL_HANDLE;
 };
 
 } // namespace my

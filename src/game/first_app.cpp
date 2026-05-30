@@ -39,13 +39,11 @@ FirstApp::FirstApp(Mode mode) : mode_(mode) {
         glfwWindow = std::make_unique<GlfwWindow>(WIDTH, HEIGHT, "wallpaperEdit");
 
         device = std::make_unique<Device>([this](VkInstance inst) {
-            VkSurfaceKHR s;
-            glfwWindow->createWindowSurface(inst, &s);
-            return s;
+            glfwWindow->createVulkanSurface(inst);
+            return glfwWindow->getVkSurface();
         });
 
-        myRenderer = std::make_unique<MyRenderer>([this] { return glfwWindow->getExtend(); },
-                                                  [] { glfwWaitEvents(); }, *device);
+        myRenderer = std::make_unique<MyRenderer>(*glfwWindow, *device);
 
     } else {
         waylandWindow = std::make_unique<WaylandWindow>("wallpaper");
@@ -55,8 +53,7 @@ FirstApp::FirstApp(Mode mode) : mode_(mode) {
             return waylandWindow->getMonitor()[0].vkSurface;
         });
 
-        myRenderer = std::make_unique<MyRenderer>([this] { return waylandWindow->getExtent(); },
-                                                  [this] { waylandWindow->pollEvents(); }, *device);
+        myRenderer = std::make_unique<MyRenderer>(*waylandWindow, *device);
     }
 
     globalPool = MyDescriptorPool::Builder(*device)
@@ -66,7 +63,13 @@ FirstApp::FirstApp(Mode mode) : mode_(mode) {
     loadGameObjects();
 }
 
-FirstApp::~FirstApp() {}
+FirstApp::~FirstApp() {
+    if (mode_ == Mode::Edit) {
+        glfwWindow->destroyVulkanSurfaces(device->getInstance());
+    } else {
+        waylandWindow->destroyVulkanSurfaces(device->getInstance());
+    }
+}
 
 void FirstApp::run() {
     std::vector<std::unique_ptr<MyBuffer>> uboBuffers(SwapChain::MAX_FRAMES_IN_FLIGHT);

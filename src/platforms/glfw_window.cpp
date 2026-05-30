@@ -24,10 +24,14 @@ void GlfwWindow::initwindow() {
     glfwSetDropCallback(window, dropCallback);
 }
 
-void GlfwWindow::createWindowSurface(VkInstance instance, VkSurfaceKHR *surface) {
-    if (glfwCreateWindowSurface(instance, window, nullptr, surface) != VK_SUCCESS) {
+void GlfwWindow::createVulkanSurface(VkInstance instance) {
+    if (glfwCreateWindowSurface(instance, window, nullptr, &surface_) != VK_SUCCESS) {
         throw std::runtime_error("fail to create surface");
     }
+}
+
+void GlfwWindow::destroyVulkanSurfaces(VkInstance instance) {
+    vkDestroySurfaceKHR(instance, surface_, nullptr);
 }
 
 void GlfwWindow::dropCallback(GLFWwindow *window, int count, const char **paths) {
