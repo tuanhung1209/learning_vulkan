@@ -32,6 +32,8 @@ layout(push_constant) uniform Push {
     vec4 sunDirection;
 } push;
 
+#define PI 3.14159265359
+
 float algebraicSigmoid(float x, float a, float b, float c) {
     return (a * x - b) / sqrt(c + pow(a * x - b, 2.0));
 }
@@ -41,16 +43,25 @@ float horizonCurve(float x, float blendFactor, float blendHeight) {
 }
 
 void main(){
-    // moving cloud
-    vec2 uv1 = fragTexCoord + vec2(ubo.time * 0.003, ubo.time * 0.001);
-    vec2 uv2 = fragTexCoord + vec2(-ubo.time * 0.002, ubo.time * 0.0015);
-    uv1.x = fract(uv1.x);
-    uv2.x = fract(uv2.x);
+    vec3 dir = normalize(fragDir);
+
+    // scrolling texture
+    float a1 = ubo.time * 0.01;
+    float c1 = cos(a1), s1 = sin(a1);
+    vec3 d1 = vec3(dir.x * c1 - dir.z * s1, dir.y, dir.x * s1 + dir.z * c1);
+
+    float a2 = ubo.time * 0.006;
+    float c2 = cos(a2), s2 = sin(a2);
+    vec3 d2 = vec3(dir.x * c2 - dir.z * s2, dir.y, dir.x * s2 + dir.z * c2);
+
+    // convert rotated directions to equirectangular UVs
+    vec2 uv1 = vec2(atan(d1.z, d1.x) / (2.0 * PI) + 0.5, asin(clamp(d1.y, -1.0, 1.0)) / PI + 0.5);
+    vec2 uv2 = vec2(atan(d2.z, d2.x) / (2.0 * PI) + 0.5, asin(clamp(d2.y, -1.0, 1.0)) / PI + 0.5);
+
     vec3 sample1 = texture(texSampler, uv1).rgb;
     vec3 sample2 = texture(texSampler, uv2).rgb;
     vec3 texColor = mix(sample1, sample2, 0.5);
 
-    vec3 dir = normalize(fragDir);
     float texY = -dir.y * 0.5 + 0.5;
     float horizonHandle = horizonCurve(texY, 0.005, 0.57);
 
@@ -73,12 +84,14 @@ void main(){
     float sunHaze = pow(max(sunAngle, 0.0), 8.0);
     vec3 hazeColor = vec3(1.0, 1.0, 1.0);
 
+    // tint the gradient by the clouds first...
+    skyColor *= texColor;
+    skyColor *= push.skyTextureColor.rgb;
+
+    // ...then add the sun on top so the clouds don't dim it (no longer "behind")
     skyColor += sunDisc * sunColor * 2.0;
     skyColor += sunGlow * glowColor * 0.5;
     skyColor += sunHaze * hazeColor * 0.15;
-    skyColor *= texColor;
-
-    skyColor *= push.skyTextureColor.rgb;
 
     outColor = vec4(skyColor, 1.0);
 }

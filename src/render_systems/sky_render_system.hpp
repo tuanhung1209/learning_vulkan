@@ -23,6 +23,7 @@ class SkyRenderSystem {
 
     void renderSky(FrameInfo &frameInfo);
     SkyPush &getPush() { return push; }
+    const FogSettingsUbo &getFog() const { return fog; }
 
     void drawGui();
 
@@ -40,6 +41,7 @@ class SkyRenderSystem {
     VkDescriptorSet skyTextureDescriptorSet;
 
     SkyPush push{};
+    FogSettingsUbo fog{};
     std::shared_ptr<MyModel> skyModel;
     std::unique_ptr<GraphicPipeline> myGraphicPipeline;
     VkPipelineLayout graphicPipelineLayout;

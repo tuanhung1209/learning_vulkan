@@ -49,7 +49,6 @@ class TerrainGenerator {
 
     Device &myDevice;
     MyGameObject::id_t terrainId{};
-    MyGameObject::id_t heightmapViewerId{};
 };
 
 } // namespace my

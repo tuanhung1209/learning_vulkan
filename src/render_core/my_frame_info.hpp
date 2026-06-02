@@ -47,6 +47,11 @@ struct SimplePushConstantData {
     glm::mat4 normalMatrix{1.f};
 };
 
+struct FogSettingsUbo {
+    float near{80.f};
+    float far{600.f};
+};
+
 struct SkyPush {
     alignas(16) glm::vec4 horizonColor{0.05f, 0.3f, 1.f, 1.f};
     glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};

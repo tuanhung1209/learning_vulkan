@@ -13,7 +13,6 @@ namespace my {
 class GlfwWindow : public DisplayProvider {
   public:
     GlfwWindow(int w, int h, std::string name);
-    // have to put destroy somewhere else
     ~GlfwWindow();
 
     GlfwWindow(const GlfwWindow &) = delete;

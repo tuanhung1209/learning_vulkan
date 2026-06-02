@@ -29,7 +29,6 @@ void TerrainGenerator::regenerate(MyGameObject::Map &gameObjects) {
     generateHeightMap(heightMap, noisePixels);
 
     gameObjects.at(terrainId).model = generateMesh(heightMap, res, 1, config.heightScale);
-    gameObjects.at(heightmapViewerId).texture = std::make_shared<MyTexture>(myDevice, res, res, noisePixels);
 }
 
 bool TerrainGenerator::drawGui() {

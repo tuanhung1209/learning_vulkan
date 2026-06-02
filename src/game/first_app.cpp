@@ -26,6 +26,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -44,7 +45,6 @@ FirstApp::FirstApp(Mode mode) : mode_(mode) {
         });
 
         myRenderer = std::make_unique<MyRenderer>(*glfwWindow, *device);
-
     } else {
         waylandWindow = std::make_unique<WaylandWindow>("wallpaper");
 
@@ -64,6 +64,8 @@ FirstApp::FirstApp(Mode mode) : mode_(mode) {
 }
 
 FirstApp::~FirstApp() {
+    myRenderer.reset();
+
     if (mode_ == Mode::Edit) {
         glfwWindow->destroyVulkanSurfaces(device->getInstance());
     } else {
@@ -206,6 +208,8 @@ void FirstApp::run() {
             ubo.inverseView = camera.getInverseView();
 
             ubo.fogColor = skyRenderSystem.getPush().horizonColor;
+            ubo.fogNear = skyRenderSystem.getFog().near;
+            ubo.fogFar = skyRenderSystem.getFog().far;
             ubo.time = totalTime;
 
             PointLightSystem.update(frameInfo, ubo);

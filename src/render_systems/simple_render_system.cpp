@@ -70,7 +70,7 @@ void SimpleRenderSystem::createGraphicPipeline(VkRenderPass renderPass) {
     pipelineConfig.renderPass = renderPass;
     pipelineConfig.pipelineLayout = graphicPipelineLayout;
     myGraphicPipeline = std::make_unique<GraphicPipeline>(myDevice, "shaders/simple_shader.vert.spv",
-                                                   "shaders/simple_shader.frag.spv", pipelineConfig);
+                                                          "shaders/simple_shader.frag.spv", pipelineConfig);
 }
 
 VkDescriptorSet SimpleRenderSystem::getOrCreateTextureDescriptorSet(MyTexture &tex) {
@@ -93,8 +93,8 @@ VkDescriptorSet SimpleRenderSystem::getOrCreateTextureDescriptorSet(MyTexture &t
 void SimpleRenderSystem::renderGameObjects(FrameInfo &frameInfo) {
     myGraphicPipeline->bind(frameInfo.commandBuffer);
 
-    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout, 0, 1,
-                            &frameInfo.globalDescriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout,
+                            0, 1, &frameInfo.globalDescriptorSet, 0, nullptr);
 
     // can split into multiple vector to have object with different component/attribute
     for (auto &kv : frameInfo.gameObjecs) {
@@ -104,8 +104,8 @@ void SimpleRenderSystem::renderGameObjects(FrameInfo &frameInfo) {
 
         MyTexture &tex = obj.texture ? *obj.texture : *defaultWhiteTexture;
         VkDescriptorSet texDescriptorSet = getOrCreateTextureDescriptorSet(tex);
-        vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout, 1,
-                                1, &texDescriptorSet, 0, nullptr);
+        vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                graphicPipelineLayout, 1, 1, &texDescriptorSet, 0, nullptr);
 
         SimplePushConstantData push{};
         push.modelMatrix = obj.transform.mat4();
