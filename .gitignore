@@ -3,8 +3,9 @@
 *.clang-format
 .clangd
 compile_flags.txt
-gemini_notes/
 CLAUDE.md
+AGENTS.md
+opencode.json
 
 *.spv
 *.out

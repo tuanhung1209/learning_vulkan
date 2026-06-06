@@ -36,6 +36,10 @@ layout(std430, set = 1, binding = 0) readonly buffer GrassBuffer {
     GrassTransformData transforms[];
 };
 
+layout(std430, set = 1, binding = 2) readonly buffer VisibleGrassBuffer {
+    GrassTransformData visibleGrass[];
+};
+
 layout(push_constant) uniform Push {
     uint gridSize;
     uint terrainResolution;
@@ -147,7 +151,7 @@ float snoise(vec3 v) {
 
 void main() {
     uint id = uint(gl_InstanceIndex);
-    GrassTransformData t = transforms[id];
+    GrassTransformData t = visibleGrass[id];
 
     // Per-blade random values
     float idHash = hash(id * 31u + 37u);

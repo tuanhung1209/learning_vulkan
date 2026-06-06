@@ -35,8 +35,9 @@ class GrassRenderSystem {
     void createComputePoolAndSetLayout();
     void createGrassComputeBuffer();
     void createHeightComputeBuffer();
+    void createIndirectDrawBuffer();
 
-    void createComputePipelineLayout();
+    void createComputePipelineLayout(VkDescriptorSetLayout globalSetLayout);
     void createComputePipeline();
 
     void createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout);
@@ -45,7 +46,10 @@ class GrassRenderSystem {
     std::unique_ptr<MyDescriptorPool> grassComputePool;
     std::unique_ptr<MyDescriptorSetLayout> grassComputeSetLayout;
     std::vector<VkDescriptorSet> grassComputeDescriptorSet;
+
     std::vector<std::unique_ptr<MyBuffer>> grassComputeBuffers;
+    std::vector<std::unique_ptr<MyBuffer>> visibleGrassBuffers;
+    std::vector<std::unique_ptr<MyBuffer>> indirectDrawBuffers;
     std::vector<std::unique_ptr<MyBuffer>> heightComputeBuffers;
 
     std::unique_ptr<ComputePipeline> myComputePipeline;
@@ -53,6 +57,7 @@ class GrassRenderSystem {
 
     std::unique_ptr<GraphicPipeline> myGraphicPipeline;
     VkPipelineLayout graphicPipelineLayout;
+
     std::shared_ptr<MyModel> grassBladeModel;
 
     GrassComputePush push{};

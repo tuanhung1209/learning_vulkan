@@ -12,7 +12,6 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
-#include <sys/types.h>
 #include <vulkan/vulkan_core.h>
 
 namespace my {
@@ -23,9 +22,13 @@ GrassRenderSystem::GrassRenderSystem(Device &device, VkRenderPass renderPass,
     grassBladeModel = MyModel::createModelFromFile(myDevice, "assets/models/grass_blade.obj");
     createGrassComputeBuffer();
     createHeightComputeBuffer();
+    createIndirectDrawBuffer();
+
     createComputePoolAndSetLayout();
-    createComputePipelineLayout();
+    createComputePipelineLayout(globalSetLayout);
+
     createGraphicPipelineLayout(globalSetLayout);
+
     createComputePipeline();
     createGraphicPipeline(renderPass);
 }
@@ -81,8 +84,13 @@ void GrassRenderSystem::updateHeightMap(const std::vector<float> &heightMap, flo
 
 void GrassRenderSystem::createGrassComputeBuffer() {
     grassComputeBuffers.resize(SwapChain::MAX_FRAMES_IN_FLIGHT);
+    visibleGrassBuffers.resize(SwapChain::MAX_FRAMES_IN_FLIGHT);
     for (int i = 0; i < grassComputeBuffers.size(); i++) {
         grassComputeBuffers[i] = std::make_unique<MyBuffer>(
+            myDevice, sizeof(GrassTransformData) * MAX_GRASS_GRID * MAX_GRASS_GRID, 1,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        visibleGrassBuffers[i] = std::make_unique<MyBuffer>(
             myDevice, sizeof(GrassTransformData) * MAX_GRASS_GRID * MAX_GRASS_GRID, 1,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
@@ -98,37 +106,69 @@ void GrassRenderSystem::createHeightComputeBuffer() {
     }
 }
 
+void GrassRenderSystem::createIndirectDrawBuffer() {
+    indirectDrawBuffers.resize(SwapChain::MAX_FRAMES_IN_FLIGHT);
+    for (int i = 0; i < indirectDrawBuffers.size(); i++) {
+        VkDrawIndexedIndirectCommand drawCmd{};
+        drawCmd.indexCount = grassBladeModel->getIndexCount();
+
+        MyBuffer stagingBuffer{myDevice, sizeof(VkDrawIndexedIndirectCommand), 1,
+                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT};
+
+        stagingBuffer.map();
+        stagingBuffer.writeToBuffer(&drawCmd);
+
+        indirectDrawBuffers[i] = std::make_unique<MyBuffer>(myDevice, sizeof(VkDrawIndexedIndirectCommand), 1,
+                                                            VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
+                                                                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                                                                VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        myDevice.copyBuffer(stagingBuffer.getBuffer(), indirectDrawBuffers[i]->getBuffer(),
+                            sizeof(VkDrawIndexedIndirectCommand));
+    }
+}
+
 void GrassRenderSystem::createComputePoolAndSetLayout() {
     grassComputePool =
         MyDescriptorPool::Builder(myDevice)
             .setMaxSets(SwapChain::MAX_FRAMES_IN_FLIGHT)
-            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 * SwapChain::MAX_FRAMES_IN_FLIGHT)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4 * SwapChain::MAX_FRAMES_IN_FLIGHT)
             .build();
 
     grassComputeSetLayout = MyDescriptorSetLayout::Builder(myDevice)
                                 .addBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                                             VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT)
                                 .addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+                                .addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                                            VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT)
+                                .addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
                                 .build();
 
     grassComputeDescriptorSet.resize(SwapChain::MAX_FRAMES_IN_FLIGHT);
     for (int i = 0; i < grassComputeDescriptorSet.size(); i++) {
         auto grassBufferInfo = grassComputeBuffers[i]->descriptorInfo();
         auto heightBufferInfo = heightComputeBuffers[i]->descriptorInfo();
+        auto visibleGrassBufferInfo = visibleGrassBuffers[i]->descriptorInfo();
+        auto indirectDrawBufferInfo = indirectDrawBuffers[i]->descriptorInfo();
         MyDescriptorWriter(*grassComputeSetLayout, *grassComputePool)
             .writeBuffer(0, &grassBufferInfo)
             .writeBuffer(1, &heightBufferInfo)
+            .writeBuffer(2, &visibleGrassBufferInfo)
+            .writeBuffer(3, &indirectDrawBufferInfo)
             .build(grassComputeDescriptorSet[i]);
     }
 }
 
-void GrassRenderSystem::createComputePipelineLayout() {
+void GrassRenderSystem::createComputePipelineLayout(VkDescriptorSetLayout globalSetLayout) {
     VkPushConstantRange pushConstantRange{};
     pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     pushConstantRange.offset = 0;
     pushConstantRange.size = sizeof(GrassComputePush);
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts{
+        globalSetLayout,
         grassComputeSetLayout->getDescriptorSetLayout(),
     };
 
@@ -182,17 +222,31 @@ void GrassRenderSystem::createGraphicPipeline(VkRenderPass renderPass) {
     GraphicPipeline::defaultPipelineConfigInfo(pipelineConfig);
     pipelineConfig.renderPass = renderPass;
     pipelineConfig.pipelineLayout = graphicPipelineLayout;
+
     myGraphicPipeline = std::make_unique<GraphicPipeline>(myDevice, "shaders/grass_shader.vert.spv",
                                                           "shaders/grass_shader.frag.spv", pipelineConfig);
 }
 void GrassRenderSystem::computeGrass(FrameInfo &frameInfo) {
     myComputePipeline->bind(frameInfo.commandBuffer);
 
-    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0,
-                            1, &grassComputeDescriptorSet[frameInfo.frameIndex], 0, nullptr);
+    vkCmdFillBuffer(frameInfo.commandBuffer, indirectDrawBuffers[frameInfo.frameIndex]->getBuffer(), 4,
+                    sizeof(uint32_t), 0);
+
+    VkMemoryBarrier resetBarrier{};
+    resetBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    resetBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    resetBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+    vkCmdPipelineBarrier(frameInfo.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &resetBarrier, 0, nullptr, 0, nullptr);
 
     vkCmdPushConstants(frameInfo.commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
                        sizeof(GrassComputePush), &push);
+
+    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0,
+                            1, &frameInfo.globalDescriptorSet, 0, nullptr);
+
+    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 1,
+                            1, &grassComputeDescriptorSet[frameInfo.frameIndex], 0, nullptr);
 
     uint32_t groupCount = static_cast<uint32_t>(std::ceil(push.gridSize * push.gridSize / 256.0));
     vkCmdDispatch(frameInfo.commandBuffer, groupCount, 1, 1);
@@ -200,10 +254,10 @@ void GrassRenderSystem::computeGrass(FrameInfo &frameInfo) {
     VkMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
     barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
     vkCmdPipelineBarrier(frameInfo.commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 1,
+                         &barrier, 0, nullptr, 0, nullptr);
 }
 
 void GrassRenderSystem::renderGrass(FrameInfo &frameInfo) {
@@ -219,8 +273,9 @@ void GrassRenderSystem::renderGrass(FrameInfo &frameInfo) {
                             1, 1, &grassComputeDescriptorSet[frameInfo.frameIndex], 0, nullptr);
 
     grassBladeModel->bind(frameInfo.commandBuffer);
-    vkCmdDrawIndexed(frameInfo.commandBuffer, grassBladeModel->getIndexCount(), push.gridSize * push.gridSize,
-                     0, 0, 0);
+
+    vkCmdDrawIndexedIndirect(frameInfo.commandBuffer, indirectDrawBuffers[frameInfo.frameIndex]->getBuffer(),
+                             0, 1, sizeof(VkDrawIndexedIndirectCommand));
 }
 
 } // namespace my

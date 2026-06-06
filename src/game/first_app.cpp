@@ -83,7 +83,8 @@ void FirstApp::run() {
     }
 
     auto globalSetLayout = MyDescriptorSetLayout::Builder(*device)
-                               .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+                               .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                                           VK_SHADER_STAGE_ALL_GRAPHICS | VK_SHADER_STAGE_COMPUTE_BIT)
                                .build();
 
     std::vector<VkDescriptorSet> globalDescriptorSet(SwapChain::MAX_FRAMES_IN_FLIGHT);

@@ -8,7 +8,7 @@
 namespace my {
 #define MAX_LIGHT 10
 #define MAX_BULLET 100
-#define MAX_GRASS_GRID 2048
+#define MAX_GRASS_GRID 4096
 
 struct alignas(16) GrassTransformData {
     glm::vec4 translation{};
