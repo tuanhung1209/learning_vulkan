@@ -19,11 +19,13 @@ SkyRenderSystem::SkyRenderSystem(Device &device, VkRenderPass renderPass,
                                  VkDescriptorSetLayout globalSetLayout)
     : myDevice{device} {
     skyModel = MyModel::createModelFromFile(myDevice, "assets/models/sphere.obj");
+    skyTexture = std::make_shared<MyTexture>(myDevice, "assets/textures/sky_texture.png");
     createSkyTexturePoolAndSetLayout();
 
     createGraphicPipelineLayout(globalSetLayout);
     createGraphicPipeline(renderPass);
 }
+
 SkyRenderSystem::~SkyRenderSystem() {
     vkDestroyPipelineLayout(myDevice.device(), graphicPipelineLayout, nullptr);
 }
@@ -39,7 +41,6 @@ void SkyRenderSystem::createSkyTexturePoolAndSetLayout() {
             .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .build();
 
-    skyTexture = std::make_shared<MyTexture>(myDevice, "assets/textures/sky_texture.png");
     skyTextureDescriptorSet = createSkyTextureDescriptorSet(*skyTexture);
 }
 
@@ -51,7 +52,6 @@ VkDescriptorSet SkyRenderSystem ::createSkyTextureDescriptorSet(MyTexture &tex) 
 
     VkDescriptorSet descriptorSet;
     MyDescriptorWriter(*skyTextureSetLayout, *skyTexturePool).writeImage(0, &imageInfo).build(descriptorSet);
-
     return descriptorSet;
 }
 

@@ -59,6 +59,32 @@ struct SkyPush {
     glm::vec4 sunDirection{1.f, 0.f, 0.5f, 0.f};
 };
 
+struct WaterWave {
+    alignas(16) glm::vec2 direction{1.f, 0.f};
+    float frequency{1.f};
+    float amplitude{0.5f};
+    float steepness{0.5f};
+    float speed{1.f};
+};
+
+struct OceanUbo {
+    WaterWave waves[4];
+    alignas(16) glm::vec4 sunDirection{1.f, 0.3f, 0.5f, 1.f};
+    alignas(16) glm::vec4 horizonColor{0.05f, 0.3f, 1.f, 1.f};
+    alignas(16) glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};
+    alignas(16) glm::vec4 deepColor{0.01f, 0.05f, 0.15f, 1.f};
+};
+
+/*
+struct OceanUbo {
+    WaterWave waves[4];
+    glm::vec4 sunDirection{};
+    glm::vec4 horizonColor{};
+    glm::vec4 skyColor{};
+    glm::vec4 deepColor{};
+};
+*/
+
 struct GrassComputePush {
     // Grass
     uint32_t gridSize{512};

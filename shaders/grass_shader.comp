@@ -211,11 +211,16 @@ void main() {
     float height = sampleHeight(col, row);
 
     // Cull grass above water level
-    if (height >= 0.0)
+    if (height >= -0.3)
         return;
 
-    // Per-blade random rotation
-    float rotation = hash(id * 13u + 7u) * 6.28318;
+    // Cull grass outside terrain bounds
+    float halfTerrain = float(push.terrainResolution - 1) * 0.5;
+    if (abs(col) > halfTerrain || abs(row) > halfTerrain)
+        return;
+
+    // Per-blade stable seed (deterministic from grid ID, not compacted index)
+    float stableSeed = hash(id * 13u + 7u);
 
     // Height & width variation
     float noise = abs(snoise(vec3(col, row, 0.0) * 0.2));
@@ -223,8 +228,11 @@ void main() {
     float widthVar = mix(0.7, 1.0, hash(id * 23u + 19u));
     float bladeH = heightVar * push.bladeHeight;
 
+    // Sink root slightly below terrain surface
+    float rootY = height + 0.3;
+
     // Frustum culling — bounding sphere at blade midpoint
-    vec3 center = vec3(col, height + bladeH * 0.5, row);
+    vec3 center = vec3(col, rootY + bladeH * 0.5, row);
     float radius = max(bladeH, widthVar) * 0.75;
     vec4 planes[6];
     extractFrustumPlanes(ubo.projection * ubo.view, planes);
@@ -233,6 +241,6 @@ void main() {
 
     // Append survivor to compacted visible buffer
     uint slot = atomicAdd(indirectCmd.instanceCount, 1u);
-    visibleGrass[slot].translation = vec4(col, height, row, rotation);
+    visibleGrass[slot].translation = vec4(col, rootY, row, stableSeed);
     visibleGrass[slot].scale = vec2(widthVar, bladeH);
 }

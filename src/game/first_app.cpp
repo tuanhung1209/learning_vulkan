@@ -12,6 +12,7 @@
 #include "render_core/my_imgui.hpp"
 #include "render_core/my_texture.hpp"
 #include "render_systems/grass_render_system.hpp"
+#include "render_systems/ocean_render_system.hpp"
 #include "render_systems/point_light_system.hpp"
 #include "render_systems/simple_render_system.hpp"
 #include "render_systems/sky_render_system.hpp"
@@ -102,6 +103,8 @@ void FirstApp::run() {
     SkyRenderSystem skyRenderSystem{*device, myRenderer->getSceneRenderPass(),
                                     globalSetLayout->getDescriptorSetLayout()};
     GrassRenderSystem grassRenderSystem{*device, myRenderer->getSceneRenderPass(),
+                                        globalSetLayout->getDescriptorSetLayout()};
+    OceanRenderSystem oceanRenderSystem{*device, myRenderer->getSceneRenderPass(),
                                         globalSetLayout->getDescriptorSetLayout()};
     TerrainGenerator terrainGen{*device};
 
@@ -199,6 +202,7 @@ void FirstApp::run() {
 
                 grassRenderSystem.drawGui(terrainGen.config.heightScale);
                 skyRenderSystem.drawGui();
+                oceanRenderSystem.drawGui();
             }
 
             // line below to update descriptorInfo
@@ -225,6 +229,7 @@ void FirstApp::run() {
             myRenderer->beginSwapChainRenderPass(commandBuffer);
 
             skyRenderSystem.renderSky(frameInfo);
+            oceanRenderSystem.renderOcean(frameInfo);
             simpleRenderSystem.renderGameObjects(frameInfo);
             bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getGraphicPipelineLayout());
             grassRenderSystem.renderGrass(frameInfo);
@@ -258,7 +263,7 @@ void FirstApp::loadGameObjects() {
     sea.textureFilePath = "assets/textures/water.jpg";
     sea.model = quadModel;
     sea.transform.translation = {0.f, 0.f, 0.f};
-    sea.transform.scale = {10000.f, 1.f, 10000.f};
+    sea.transform.scale = {100.f, 1.f, 100.f};
     sea.rigidBody = std::make_unique<RigidBodyComponent>();
     sea.rigidBody->mass = 0.0f;
     sea.rigidBody->restitution = 0.1f;

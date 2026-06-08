@@ -153,9 +153,13 @@ void main() {
     uint id = uint(gl_InstanceIndex);
     GrassTransformData t = visibleGrass[id];
 
+    // Stable seed (deterministic per original grid slot, survives compaction)
+    uint seed = uint(t.translation.w * 4294967296.0);
+    float rotAngle = t.translation.w * 6.28318;
+
     // Per-blade random values
-    float idHash = hash(id * 31u + 37u);
-    float swayVar = mix(0.8, 1.0, hash(id * 41u + 43u));
+    float idHash = hash(seed * 31u + 37u);
+    float swayVar = mix(0.8, 1.0, hash(seed * 41u + 43u));
     float droopVar = mix(0.5, 1.0, idHash);
 
     // --- Build local-space blade (like Acerola's ModelGrass) ---
@@ -165,11 +169,11 @@ void main() {
     localPos *= vec3(t.scale.x, t.scale.y, t.scale.x);
 
     // Rotate blade around Y by random angle
-    localPos = rotateY(t.translation.w) * localPos;
+    localPos = rotateY(rotAngle) * localPos;
     localPos.y = -localPos.y;
 
     // Per-blade droop in a random direction (not wind direction)
-    float droopAngle = hash(id * 13u + 7u) * 6.28318;
+    float droopAngle = hash(seed * 13u + 7u) * 6.28318;
     vec2 droopDir = vec2(cos(droopAngle), sin(droopAngle));
     float bendAmount = position.y * position.y;
     float droopStrength = push.droopStrength * droopVar * t.scale.y;
@@ -181,7 +185,7 @@ void main() {
 
     // Per-blade wind direction variation
     vec2 baseWindDir = normalize(vec2(push.windDirX, push.windDirZ));
-    float windAngleVar = (hash(id * 53u + 59u) - 0.5) * 0.6; // +-0.3 radians (~17 degrees)
+    float windAngleVar = (hash(seed * 53u + 59u) - 0.5) * 0.6; // +-0.3 radians (~17 degrees)
     float cw = cos(windAngleVar);
     float sw = sin(windAngleVar);
     vec2 windDir = vec2(baseWindDir.x * cw - baseWindDir.y * sw,
