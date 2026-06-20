@@ -22,6 +22,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
     vec4 fogColor;
     float fogNear;
     float fogFar;
+    float fogDensity;
     float time;
 } ubo;
 
@@ -33,8 +34,10 @@ struct WaterWave {
     float speed;
 };
 
+#define MAX_OCEAN_WAVES 16
+
 layout(set = 1, binding = 0) uniform OceanUbo {
-    WaterWave waves[4];
+    WaterWave waves[MAX_OCEAN_WAVES];
     vec4 sunDirection;
     vec4 horizonColor;
     vec4 skyColor;
@@ -46,7 +49,12 @@ layout(set = 2, binding = 0) uniform sampler2D skySampler;
 #define PI 3.14159265359
 
 void main() {
-    vec3 N = normalize(fragNormal);
+    vec3 detailNormal = vec3(0.0);
+    detailNormal.x += sin(fragWorldPos.x * 40.0 + ubo.time * 2.0) * 0.015;
+    detailNormal.z += cos(fragWorldPos.z * 35.0 + ubo.time * 1.5) * 0.015;
+    detailNormal.x += sin(fragWorldPos.z * 60.0 + ubo.time * 3.0) * 0.008;
+
+    vec3 N = normalize(fragNormal + detailNormal);
     vec3 cameraPos = ubo.inverseView[3].xyz;
     vec3 V = normalize(cameraPos - fragWorldPos);
 
@@ -76,8 +84,11 @@ void main() {
     vec3 litColor = waterColor + sunSpec * sunColor + specularLight;
 
     float dist = length(cameraPos - fragWorldPos);
-    float fogFactor = clamp((ubo.fogFar - dist) / (ubo.fogFar - ubo.fogNear), 0.0, 1.0);
-    vec3 finalColor = mix(ubo.fogColor.rgb, litColor, fogFactor);
+    float t = (dist - ubo.fogNear) / max(ubo.fogFar - ubo.fogNear, 0.001);
+    float linearFog = clamp(t, 0.0, 1.0);
+    float smoothFog = t * t * (3.0 - 2.0 * t);
+    float fogAmount = mix(linearFog, smoothFog, clamp(ubo.fogDensity, 0.0, 1.0));
+    vec3 finalColor = mix(litColor, ubo.fogColor.rgb, fogAmount);
 
     outColor = vec4(finalColor, 1.0);
 }

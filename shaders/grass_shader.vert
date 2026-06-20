@@ -24,6 +24,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
     vec4 fogColor;
     float fogNear;
     float fogFar;
+    float fogDensity;
     float time;
 } ubo;
 

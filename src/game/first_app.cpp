@@ -134,10 +134,15 @@ void FirstApp::run() {
 
     PhysicsWorld physicsWorld;
 
-    SceneEntityRef sceneRef{gameObjects, playerId, terrainGen.config, skyRenderSystem.getPush(),
-                            grassRenderSystem.getPush()};
+    SceneEntityRef sceneRef{gameObjects,
+                            playerId,
+                            terrainGen.config,
+                            skyRenderSystem.getPush(),
+                            grassRenderSystem.getPush(),
+                            oceanRenderSystem.getOceanUbo()};
 
-    saveSystem.loadScene("assets/scenes/save2.json", sceneRef);
+    // TODO : add fog to all the render syten and add moveable light
+    saveSystem.loadScene("assets/scenes/default.json", sceneRef);
     terrainGen.createTerrain(gameObjects);
     grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(), terrainGen.config.heightScale);
 
@@ -215,9 +220,20 @@ void FirstApp::run() {
             ubo.fogColor = skyRenderSystem.getPush().horizonColor;
             ubo.fogNear = skyRenderSystem.getFog().near;
             ubo.fogFar = skyRenderSystem.getFog().far;
+            ubo.fogDensity = skyRenderSystem.getFog().density;
             ubo.time = totalTime;
 
             PointLightSystem.update(frameInfo, ubo);
+
+            for (auto &kv : gameObjects) {
+                auto &obj = kv.second;
+                if (obj.pointLight && obj.pointLight->lightIntensity > 100.f) {
+                    glm::vec3 sunDir = glm::normalize(obj.transform.translation);
+                    skyRenderSystem.getPush().sunDirection = glm::vec4(sunDir, 0.f);
+                    oceanRenderSystem.getOceanUbo().sunDirection = glm::vec4(sunDir, 0.f);
+                    break;
+                }
+            }
 
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
             uboBuffers[frameIndex]->flush();
@@ -246,7 +262,6 @@ void FirstApp::run() {
 }
 
 void FirstApp::loadGameObjects() {
-
     auto grassTexture = std::make_shared<MyTexture>(*device, "assets/textures/grass.png");
     auto waterTexture = std::make_shared<MyTexture>(*device, "assets/textures/water.jpg");
 
@@ -257,78 +272,6 @@ void FirstApp::loadGameObjects() {
         MyModel::createModelFromFile(*device, "assets/models/smooth_vase.obj");
     std::shared_ptr<MyModel> roughVase = MyModel::createModelFromFile(*device, "assets/models/flat_vase.obj");
     std::shared_ptr<MyModel> sphereModel = MyModel::createModelFromFile(*device, "assets/models/sphere.obj");
-
-    auto sea = MyGameObject::createGameObject();
-    sea.modelFilePath = "assets/models/quad.obj";
-    sea.textureFilePath = "assets/textures/water.jpg";
-    sea.model = quadModel;
-    sea.transform.translation = {0.f, 0.f, 0.f};
-    sea.transform.scale = {100.f, 1.f, 100.f};
-    sea.rigidBody = std::make_unique<RigidBodyComponent>();
-    sea.rigidBody->mass = 0.0f;
-    sea.rigidBody->restitution = 0.1f;
-    sea.rigidBody->computeBoxInertia(sea.transform.scale * 0.5f);
-    sea.texture = waterTexture;
-    gameObjects.emplace(sea.getId(), std::move(sea));
-
-    auto smooth_vase = MyGameObject::createGameObject();
-    smooth_vase.modelFilePath = "assets/models/smooth_vase.obj";
-    smooth_vase.model = smoothVase;
-    smooth_vase.transform.translation = {-1.5f, 0.f, 0.f};
-    smooth_vase.transform.scale = {5.f, 5.f, 5.f};
-    gameObjects.emplace(smooth_vase.getId(), std::move(smooth_vase));
-
-    auto flat_vase = MyGameObject::createGameObject();
-    flat_vase.modelFilePath = "assets/models/flat_vase.obj";
-    flat_vase.model = roughVase;
-    flat_vase.transform.translation = {1.5f, 0.f, 0.f};
-    flat_vase.transform.scale = {5.f, 5.f, 5.f};
-    gameObjects.emplace(flat_vase.getId(), std::move(flat_vase));
-
-    auto sphere = MyGameObject::createGameObject();
-    sphere.modelFilePath = "assets/models/sphere.obj";
-    sphere.model = sphereModel;
-    sphere.transform.translation = {1.5f, -4.f, 2.f};
-    sphere.transform.scale = {5.f, 5.f, 5.f};
-    gameObjects.emplace(sphere.getId(), std::move(sphere));
-
-    auto cube1 = MyGameObject::createGameObject();
-    cube1.modelFilePath = "assets/models/colored_cube.obj";
-    cube1.model = cubeModel;
-    cube1.transform.translation = {-0.5f, -3.f, 1.f};
-    cube1.transform.scale = {0.5f, 0.5f, 0.5f};
-    cube1.rigidBody = std::make_unique<RigidBodyComponent>();
-    cube1.rigidBody->mass = 1.0f;
-    cube1.rigidBody->restitution = 0.1f;
-    cube1.rigidBody->computeBoxInertia(cube1.transform.scale * 0.5f);
-    gameObjects.emplace(cube1.getId(), std::move(cube1));
-
-    auto cube2 = MyGameObject::createGameObject();
-    cube2.modelFilePath = "assets/models/colored_cube.obj";
-    cube2.model = cubeModel;
-    cube2.transform.translation = {0.5f, -15.f, 1.f};
-    cube2.transform.scale = {0.5f, 0.5f, 0.5f};
-    cube2.rigidBody = std::make_unique<RigidBodyComponent>();
-    cube2.rigidBody->mass = 2.0f;
-    cube2.rigidBody->restitution = 0.1f;
-    cube2.rigidBody->computeBoxInertia(cube2.transform.scale * 0.5f);
-    gameObjects.emplace(cube2.getId(), std::move(cube2));
-
-    auto sun = MyGameObject::createPointLight(2500000.f, 8.f, {1.f, 0.95f, 0.8f});
-    sun.transform.translation = {256.f, -2000.f, 256.f};
-    gameObjects.emplace(sun.getId(), std::move(sun));
-
-    std::vector<glm::vec3> lightColors{{1.f, .1f, .1f}, {.1f, .1f, 1.f}, {.1f, 1.f, .1f},
-                                       {1.f, 1.f, .1f}, {.1f, 1.f, 1.f}, {1.f, 1.f, 1.f}};
-
-    for (int i = 0; i < lightColors.size(); i++) {
-        auto pointLight = MyGameObject::createPointLight(0.2f);
-        pointLight.color = lightColors[i];
-        auto rotateLight =
-            glm::rotate(glm::mat4(1.f), (i * glm::two_pi<float>()) / lightColors.size(), {0.f, -1.f, 0.f});
-        pointLight.transform.translation = glm::vec3(rotateLight * glm::vec4(-1.f, -1.f, -1.f, 1.f));
-        gameObjects.emplace(pointLight.getId(), std::move(pointLight));
-    }
 }
 
 } // namespace my

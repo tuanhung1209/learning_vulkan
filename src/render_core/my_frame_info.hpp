@@ -8,6 +8,7 @@
 namespace my {
 #define MAX_LIGHT 10
 #define MAX_BULLET 100
+#define MAX_OCEAN_WAVES 16
 #define MAX_GRASS_GRID 4096
 
 struct alignas(16) GrassTransformData {
@@ -30,6 +31,7 @@ struct GlobalUbo {
     alignas(16) glm::vec4 fogColor{0.5f, 0.6f, 0.7f, 1.0f};
     float fogNear{300.f};
     float fogFar{1500.f};
+    float fogDensity{1.f};
     float time{0.f};
 };
 
@@ -50,6 +52,7 @@ struct SimplePushConstantData {
 struct FogSettingsUbo {
     float near{80.f};
     float far{600.f};
+    float density{1.f};
 };
 
 struct SkyPush {
@@ -68,22 +71,27 @@ struct WaterWave {
 };
 
 struct OceanUbo {
-    WaterWave waves[4];
+    WaterWave waves[MAX_OCEAN_WAVES];
+    /*
+    WaterWave waves[MAX_OCEAN_WAVES] = {
+
+        {normalize(glm::vec2(1.0, 0.0)), 60.0, 1.20, 0.35, 1.0},
+        {normalize(glm::vec2(0.9, 0.3)), 45.0, 0.90, 0.30, 1.0},
+        {normalize(glm::vec2(0.8, -0.4)), 50.0, 1.00, 0.28, 1.0},
+        {normalize(glm::vec2(0.7, 0.6)), 35.0, 0.70, 0.25, 1.0},
+
+        {normalize(glm::vec2(1.0, 0.1)), 12.0, 0.22, 0.55, 1.0},
+        {normalize(glm::vec2(0.6, 0.8)), 10.0, 0.18, 0.60, 1.0},
+        {normalize(glm::vec2(0.5, -0.7)), 14.0, 0.20, 0.50, 1.0},
+        {normalize(glm::vec2(0.9, -0.3)), 8.0, 0.12, 0.65, 1.0},
+    };
+    */
+
     alignas(16) glm::vec4 sunDirection{1.f, 0.3f, 0.5f, 1.f};
     alignas(16) glm::vec4 horizonColor{0.05f, 0.3f, 1.f, 1.f};
     alignas(16) glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};
     alignas(16) glm::vec4 deepColor{0.01f, 0.05f, 0.15f, 1.f};
 };
-
-/*
-struct OceanUbo {
-    WaterWave waves[4];
-    glm::vec4 sunDirection{};
-    glm::vec4 horizonColor{};
-    glm::vec4 skyColor{};
-    glm::vec4 deepColor{};
-};
-*/
 
 struct GrassComputePush {
     // Grass
@@ -114,6 +122,7 @@ struct SceneEntityRef {
     TerrainGenerator::TerrainConfig &terrainConfig;
     SkyPush &skyConfig;
     GrassComputePush &grassConfig;
+    OceanUbo &oceanConfig;
 };
 
 } // namespace my

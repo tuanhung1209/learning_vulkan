@@ -10,6 +10,8 @@ layout(location = 1) out vec3 fragNormal;
 layout(location = 2) out vec2 fragTexCoord;
 layout(location = 3) out float fragHeight;
 
+#define MAX_OCEAN_WAVES 16
+
 struct PointLight {
     vec4 position;
     vec4 color;
@@ -25,6 +27,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
     vec4 fogColor;
     float fogNear;
     float fogFar;
+    float fogDensity;
     float time;
 } ubo;
 
@@ -37,7 +40,7 @@ struct WaterWave {
 };
 
 layout(set = 1, binding = 0) uniform OceanUbo {
-    WaterWave waves[4];
+    WaterWave waves[MAX_OCEAN_WAVES];
     vec4 sunDirection;
     vec4 horizonColor;
     vec4 skyColor;
@@ -47,9 +50,10 @@ layout(set = 1, binding = 0) uniform OceanUbo {
 vec3 gerstnerDisplacement(vec3 p, WaterWave w) {
     float theta = dot(w.direction, p.xz) * w.frequency + ubo.time * w.speed;
     float c = cos(theta);
+    float s = sin(theta);
     return vec3(
         w.steepness * w.amplitude * w.direction.x * c,
-        w.amplitude * sin(theta),
+        w.amplitude * s,
         w.steepness * w.amplitude * w.direction.y * c
     );
 }
@@ -57,20 +61,25 @@ vec3 gerstnerDisplacement(vec3 p, WaterWave w) {
 vec3 gerstnerNormal(vec3 p, WaterWave w) {
     float theta = dot(w.direction, p.xz) * w.frequency + ubo.time * w.speed;
     float wa = w.frequency * w.amplitude;
+    float c = cos(theta);
+    float s = sin(theta);
     return vec3(
-        w.direction.x * wa * cos(theta),
-        w.steepness * wa * sin(theta),
-        w.direction.y * wa * cos(theta)
+        -w.direction.x * wa * c,
+        -w.steepness * wa * s,
+        -w.direction.y * wa * c
     );
 }
 
+// FIXME : change the fog to make it look better too
+
 void main() {
+    vec3 originalPos = inPosition;
     vec3 worldPos = inPosition;
     vec3 N = vec3(0.0, 1.0, 0.0);
 
-    for (int i = 0; i < 4; i++) {
-        worldPos += gerstnerDisplacement(worldPos, oceanUbo.waves[i]);
-        N += gerstnerNormal(worldPos, oceanUbo.waves[i]);
+    for (int i = 0; i < oceanUbo.waves.length(); i++) {
+        worldPos += gerstnerDisplacement(originalPos, oceanUbo.waves[i]);
+        N += gerstnerNormal(originalPos, oceanUbo.waves[i]);
     }
     N = normalize(N);
 

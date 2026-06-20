@@ -20,6 +20,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 fogColor;
     float fogNear;
     float fogFar;
+    float fogDensity;
     float time;
 } ubo;
 
@@ -92,6 +93,14 @@ void main(){
     skyColor += sunDisc * sunColor * 2.0;
     skyColor += sunGlow * glowColor * 0.5;
     skyColor += sunHaze * hazeColor * 0.15;
+
+    /*
+    vec3 cameraPosWorld = ubo.inverseView[3].xyz;
+    float dist = length(cameraPosWorld - fragPosWorld);
+    ubo.fogDensity = 4.605 / ubo.fogFar;
+    float fogFactor = clamp(exp(-pow(dist * ubo.fogDensity, 2.0)), 0.0, 1.0);
+    vec3 finalColor = mix(ubo.fogColor.rgb, skyColor, fogFactor);
+    */
 
     outColor = vec4(skyColor, 1.0);
 }

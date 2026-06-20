@@ -102,6 +102,7 @@ void SkyRenderSystem::drawGui() {
     ImGui::SeparatorText("Fog");
     ImGui::SliderFloat("Fog Near", &fog.near, 0.f, 1000.f);
     ImGui::SliderFloat("Fog Far", &fog.far, 0.f, 2000.f);
+    ImGui::SliderFloat("Fog Smoothness", &fog.density, 0.f, 1.f);
     ImGui::End();
 }
 

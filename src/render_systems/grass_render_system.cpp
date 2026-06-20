@@ -93,8 +93,6 @@ void GrassRenderSystem::createGrassComputeBuffer() {
         visibleGrassBuffers[i] = std::make_unique<MyBuffer>(
             myDevice, sizeof(GrassTransformData) * MAX_GRASS_GRID * MAX_GRASS_GRID, 1,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        grassComputeBuffers[i]->map();
-        visibleGrassBuffers[i]->map();
     }
 }
 

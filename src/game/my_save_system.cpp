@@ -114,6 +114,28 @@ void SaveSystem::saveScene(const std::string &saveFilePath, SceneEntityRef scene
                              grassPush.tipColor.w};
     sceneJson["grass"] = grassJson;
 
+    // Ocean
+    auto &ocean = scene.oceanConfig;
+    json oceanJson;
+    oceanJson["sunDirection"] = {ocean.sunDirection.x, ocean.sunDirection.y, ocean.sunDirection.z,
+                                 ocean.sunDirection.w};
+    oceanJson["horizonColor"] = {ocean.horizonColor.x, ocean.horizonColor.y, ocean.horizonColor.z,
+                                 ocean.horizonColor.w};
+    oceanJson["skyColor"] = {ocean.skyColor.x, ocean.skyColor.y, ocean.skyColor.z, ocean.skyColor.w};
+    oceanJson["deepColor"] = {ocean.deepColor.x, ocean.deepColor.y, ocean.deepColor.z, ocean.deepColor.w};
+    json wavesJson = json::array();
+    for (int i = 0; i < MAX_OCEAN_WAVES; i++) {
+        json w;
+        w["direction"] = {ocean.waves[i].direction.x, ocean.waves[i].direction.y};
+        w["frequency"] = ocean.waves[i].frequency;
+        w["amplitude"] = ocean.waves[i].amplitude;
+        w["steepness"] = ocean.waves[i].steepness;
+        w["speed"] = ocean.waves[i].speed;
+        wavesJson.push_back(w);
+    }
+    oceanJson["waves"] = wavesJson;
+    sceneJson["ocean"] = oceanJson;
+
     std::ofstream saveFile(saveFilePath);
     saveFile << sceneJson.dump(4);
 }
@@ -225,7 +247,29 @@ void SaveSystem::loadScene(const std::string &loadFilePath, SceneEntityRef scene
     grassPush.baseColor = {grassData["baseColor"][0], grassData["baseColor"][1], grassData["baseColor"][2],
                            grassData["baseColor"][3]};
     grassPush.tipColor = {grassData["tipColor"][0], grassData["tipColor"][1], grassData["tipColor"][2],
-                          grassData["tipColor"][3]};
+                           grassData["tipColor"][3]};
+
+    // Ocean
+    if (jsonScene.contains("ocean")) {
+        auto &oceanData = jsonScene["ocean"];
+        auto &ocean = scene.oceanConfig;
+        ocean.sunDirection = {oceanData["sunDirection"][0], oceanData["sunDirection"][1],
+                              oceanData["sunDirection"][2], oceanData["sunDirection"][3]};
+        ocean.horizonColor = {oceanData["horizonColor"][0], oceanData["horizonColor"][1],
+                              oceanData["horizonColor"][2], oceanData["horizonColor"][3]};
+        ocean.skyColor = {oceanData["skyColor"][0], oceanData["skyColor"][1], oceanData["skyColor"][2],
+                          oceanData["skyColor"][3]};
+        ocean.deepColor = {oceanData["deepColor"][0], oceanData["deepColor"][1], oceanData["deepColor"][2],
+                           oceanData["deepColor"][3]};
+        for (int i = 0; i < MAX_OCEAN_WAVES; i++) {
+            ocean.waves[i].direction = {oceanData["waves"][i]["direction"][0],
+                                        oceanData["waves"][i]["direction"][1]};
+            ocean.waves[i].frequency = oceanData["waves"][i]["frequency"];
+            ocean.waves[i].amplitude = oceanData["waves"][i]["amplitude"];
+            ocean.waves[i].steepness = oceanData["waves"][i]["steepness"];
+            ocean.waves[i].speed = oceanData["waves"][i]["speed"];
+        }
+    }
 }
 
 }; // namespace my

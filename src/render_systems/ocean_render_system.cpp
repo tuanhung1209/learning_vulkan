@@ -127,11 +127,11 @@ void OceanRenderSystem::drawGui() {
     }
 
     if (ImGui::CollapsingHeader("Waves", ImGuiTreeNodeFlags_DefaultOpen)) {
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < MAX_OCEAN_WAVES; i++) {
             ImGui::PushID(i);
             ImGui::Text("Wave %d", i + 1);
             ImGui::SliderFloat2("Direction", &oceanUbo.waves[i].direction.x, -1.f, 1.f);
-            ImGui::SliderFloat("Frequency", &oceanUbo.waves[i].frequency, 0.02f, 5.f);
+            ImGui::SliderFloat("Frequency", &oceanUbo.waves[i].frequency, 0.02f, 65.f);
             ImGui::SliderFloat("Amplitude", &oceanUbo.waves[i].amplitude, 0.f, 4.f);
             ImGui::SliderFloat("Steepness", &oceanUbo.waves[i].steepness, 0.f, 0.99f);
             ImGui::SliderFloat("Speed", &oceanUbo.waves[i].speed, 0.1f, 3.f);

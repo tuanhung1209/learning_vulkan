@@ -21,6 +21,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
     vec4 fogColor;
     float fogNear;
     float fogFar;
+    float fogDensity;
     float time;
 } ubo;
 
@@ -40,8 +41,11 @@ void main() {
     // Fog
     vec3 cameraPosWorld = ubo.inverseView[3].xyz;
     float dist = length(cameraPosWorld - fragPosWorld);
-    float fogFactor = clamp((ubo.fogFar - dist) / (ubo.fogFar - ubo.fogNear), 0.0, 1.0);
-    vec3 finalColor = mix(ubo.fogColor.rgb, grassColor, fogFactor);
+    float t = (dist - ubo.fogNear) / max(ubo.fogFar - ubo.fogNear, 0.001);
+    float linearFog = clamp(t, 0.0, 1.0);
+    float smoothFog = t * t * (3.0 - 2.0 * t);
+    float fogAmount = mix(linearFog, smoothFog, clamp(ubo.fogDensity, 0.0, 1.0));
+    vec3 finalColor = mix(grassColor, ubo.fogColor.rgb, fogAmount);
 
     outColor = vec4(finalColor, 1.0);
 }
