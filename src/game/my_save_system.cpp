@@ -86,8 +86,6 @@ void SaveSystem::saveScene(const std::string &saveFilePath, SceneEntityRef scene
     skyJson["skyColor"] = {skyPush.skyColor.x, skyPush.skyColor.y, skyPush.skyColor.z, skyPush.skyColor.w};
     skyJson["skyTextureColor"] = {skyPush.skyTextureColor.x, skyPush.skyTextureColor.y,
                                   skyPush.skyTextureColor.z, skyPush.skyTextureColor.w};
-    skyJson["sunDirection"] = {skyPush.sunDirection.x, skyPush.sunDirection.y, skyPush.sunDirection.z,
-                               skyPush.sunDirection.w};
     sceneJson["sky"] = skyJson;
 
     // Grass
@@ -117,8 +115,6 @@ void SaveSystem::saveScene(const std::string &saveFilePath, SceneEntityRef scene
     // Ocean
     auto &ocean = scene.oceanConfig;
     json oceanJson;
-    oceanJson["sunDirection"] = {ocean.sunDirection.x, ocean.sunDirection.y, ocean.sunDirection.z,
-                                 ocean.sunDirection.w};
     oceanJson["horizonColor"] = {ocean.horizonColor.x, ocean.horizonColor.y, ocean.horizonColor.z,
                                  ocean.horizonColor.w};
     oceanJson["skyColor"] = {ocean.skyColor.x, ocean.skyColor.y, ocean.skyColor.z, ocean.skyColor.w};
@@ -223,8 +219,6 @@ void SaveSystem::loadScene(const std::string &loadFilePath, SceneEntityRef scene
                         skyData["skyColor"][3]};
     skyPush.skyTextureColor = {skyData["skyTextureColor"][0], skyData["skyTextureColor"][1],
                                skyData["skyTextureColor"][2], skyData["skyTextureColor"][3]};
-    skyPush.sunDirection = {skyData["sunDirection"][0], skyData["sunDirection"][1],
-                            skyData["sunDirection"][2], skyData["sunDirection"][3]};
 
     // Grass
     auto &grassData = jsonScene["grass"];
@@ -253,8 +247,6 @@ void SaveSystem::loadScene(const std::string &loadFilePath, SceneEntityRef scene
     if (jsonScene.contains("ocean")) {
         auto &oceanData = jsonScene["ocean"];
         auto &ocean = scene.oceanConfig;
-        ocean.sunDirection = {oceanData["sunDirection"][0], oceanData["sunDirection"][1],
-                              oceanData["sunDirection"][2], oceanData["sunDirection"][3]};
         ocean.horizonColor = {oceanData["horizonColor"][0], oceanData["horizonColor"][1],
                               oceanData["horizonColor"][2], oceanData["horizonColor"][3]};
         ocean.skyColor = {oceanData["skyColor"][0], oceanData["skyColor"][1], oceanData["skyColor"][2],

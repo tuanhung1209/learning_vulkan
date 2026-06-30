@@ -24,6 +24,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
     vec4 ambientLightColor;
     PointLight pointlights[10];
     int numLights;
+    vec4 sunDirection;
     vec4 fogColor;
     float fogNear;
     float fogFar;
@@ -41,7 +42,6 @@ struct WaterWave {
 
 layout(set = 1, binding = 0) uniform OceanUbo {
     WaterWave waves[MAX_OCEAN_WAVES];
-    vec4 sunDirection;
     vec4 horizonColor;
     vec4 skyColor;
     vec4 deepColor;

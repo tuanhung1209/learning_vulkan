@@ -28,7 +28,8 @@ struct GlobalUbo {
     glm::vec4 ambientLightColor{1.f, 1.f, 1.f, .02f};
     PointLight pointLights[MAX_LIGHT];
     int numLights;
-    alignas(16) glm::vec4 fogColor{0.5f, 0.6f, 0.7f, 1.0f};
+    alignas(16) glm::vec4 sunDirection{1.f, 0.5f, 0.f, 0.5f};
+    glm::vec4 fogColor{0.5f, 0.6f, 0.7f, 1.0f};
     float fogNear{300.f};
     float fogFar{1500.f};
     float fogDensity{1.f};
@@ -59,7 +60,6 @@ struct SkyPush {
     alignas(16) glm::vec4 horizonColor{0.05f, 0.3f, 1.f, 1.f};
     glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};
     glm::vec4 skyTextureColor{0.941f, 0.322f, 0.875f, 1.0f};
-    glm::vec4 sunDirection{1.f, 0.f, 0.5f, 0.f};
 };
 
 struct WaterWave {
@@ -72,22 +72,6 @@ struct WaterWave {
 
 struct OceanUbo {
     WaterWave waves[MAX_OCEAN_WAVES];
-    /*
-    WaterWave waves[MAX_OCEAN_WAVES] = {
-
-        {normalize(glm::vec2(1.0, 0.0)), 60.0, 1.20, 0.35, 1.0},
-        {normalize(glm::vec2(0.9, 0.3)), 45.0, 0.90, 0.30, 1.0},
-        {normalize(glm::vec2(0.8, -0.4)), 50.0, 1.00, 0.28, 1.0},
-        {normalize(glm::vec2(0.7, 0.6)), 35.0, 0.70, 0.25, 1.0},
-
-        {normalize(glm::vec2(1.0, 0.1)), 12.0, 0.22, 0.55, 1.0},
-        {normalize(glm::vec2(0.6, 0.8)), 10.0, 0.18, 0.60, 1.0},
-        {normalize(glm::vec2(0.5, -0.7)), 14.0, 0.20, 0.50, 1.0},
-        {normalize(glm::vec2(0.9, -0.3)), 8.0, 0.12, 0.65, 1.0},
-    };
-    */
-
-    alignas(16) glm::vec4 sunDirection{1.f, 0.3f, 0.5f, 1.f};
     alignas(16) glm::vec4 horizonColor{0.05f, 0.3f, 1.f, 1.f};
     alignas(16) glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};
     alignas(16) glm::vec4 deepColor{0.01f, 0.05f, 0.15f, 1.f};

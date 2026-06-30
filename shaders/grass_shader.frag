@@ -18,6 +18,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
     vec4 ambientLightColor;
     PointLight pointlights[10];
     int numLights;
+    vec4 sunDirection;
     vec4 fogColor;
     float fogNear;
     float fogFar;
@@ -27,11 +28,12 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
 
 void main() {
     // Directional light (sun)
-    vec3 lightDir = normalize(vec3(1.0, 1.0, 0.5));
-    float NdotL = max(dot(vec3(0.0, 1.0, 0.0), lightDir), 0.0);
+    vec3 lightDir = normalize(ubo.sunDirection.xyz);
+    float sunVis = clamp(ubo.sunDirection.w, 0.0, 1.0);
+    float NdotL = max(dot(vec3(0.0, -1.0, 0.0), lightDir), 0.0);
 
     vec3 ambient = ubo.ambientLightColor.xyz * ubo.ambientLightColor.w;
-    vec3 diffuse = vec3(1.0) * NdotL * 0.8;
+    vec3 diffuse = vec3(1.0) * NdotL * 0.8 * sunVis;
 
     // AO darkens the base; tip is fully lit
     float ao = mix(0.05, 1.0, fragHeightFactor);

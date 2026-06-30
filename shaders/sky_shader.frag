@@ -17,6 +17,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 ambientLightColor;
     PointLight pointlights[10];
     int numLights;
+    vec4 sunDirection;
     vec4 fogColor;
     float fogNear;
     float fogFar;
@@ -30,7 +31,6 @@ layout(push_constant) uniform Push {
     vec4 horizonColor;
     vec4 skyColor;
     vec4 skyTextureColor;
-    vec4 sunDirection;
 } push;
 
 #define PI 3.14159265359
@@ -70,7 +70,7 @@ void main(){
     vec3 skyColor = mix(push.horizonColor.rgb, push.skyColor.rgb, horizonHandle);
 
     // sun
-    vec3 sunDir = normalize(push.sunDirection.xyz);
+    vec3 sunDir = normalize(ubo.sunDirection.xyz);
     float sunAngle = dot(dir, sunDir);
 
     // hard sun disc

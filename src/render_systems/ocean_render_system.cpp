@@ -120,7 +120,6 @@ void OceanRenderSystem::drawGui() {
     ImGui::Begin("Ocean");
 
     if (ImGui::CollapsingHeader("Lighting", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::SliderFloat3("Sun Direction", &oceanUbo.sunDirection.x, -1.f, 1.f);
         ImGui::ColorEdit3("Horizon Color", &oceanUbo.horizonColor.x);
         ImGui::ColorEdit3("Sky Color", &oceanUbo.skyColor.x);
         ImGui::ColorEdit3("Deep Color", &oceanUbo.deepColor.x);

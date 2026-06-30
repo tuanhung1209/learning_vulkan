@@ -98,7 +98,6 @@ void SkyRenderSystem::drawGui() {
     ImGui::ColorPicker4("Horizon Color", &push.horizonColor.x);
     ImGui::ColorPicker4("Sky Color", &push.skyColor.x);
     ImGui::ColorPicker4("Sky TColor", &push.skyTextureColor.x);
-    ImGui::SliderFloat3("Sun Direction", &push.sunDirection.x, -1.f, 1.f);
     ImGui::SeparatorText("Fog");
     ImGui::SliderFloat("Fog Near", &fog.near, 0.f, 1000.f);
     ImGui::SliderFloat("Fog Far", &fog.far, 0.f, 2000.f);

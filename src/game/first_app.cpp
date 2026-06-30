@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include "input/glfw_input_bridge.hpp"
 #include "input/input_state.hpp"
+#include "math/NOAA_solar_position.hpp"
 #include "my_save_system.hpp"
 #include "render_core/my_frame_info.hpp"
 #include "render_core/my_imgui.hpp"
@@ -141,13 +142,20 @@ void FirstApp::run() {
                             grassRenderSystem.getPush(),
                             oceanRenderSystem.getOceanUbo()};
 
-    // TODO : add fog to all the render syten and add moveable light
     saveSystem.loadScene("assets/scenes/default.json", sceneRef);
     terrainGen.createTerrain(gameObjects);
     grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(), terrainGen.config.heightScale);
 
     auto currentTime = std::chrono::high_resolution_clock::now();
     float totalTime = 0.f;
+
+    // TEST :
+    float timeOfDay = 10.5f;
+    float latitude = 21.0278f;
+    float longitude = 105.8342f;
+    int year = 2026;
+    int month = 6;
+    int day = 23;
 
     while (mode_ == Mode::Wallpaper ? !waylandWindow->shouldClose() : !glfwWindow->shouldClose()) {
         if (mode_ == Mode::Wallpaper) {
@@ -208,9 +216,31 @@ void FirstApp::run() {
                 grassRenderSystem.drawGui(terrainGen.config.heightScale);
                 skyRenderSystem.drawGui();
                 oceanRenderSystem.drawGui();
+
+                ImGui::Begin("Sun");
+                ImGui::SliderFloat("Time of Day (hours)", &timeOfDay, 0.0f, 24.0f);
+                ImGui::Separator();
+                ImGui::InputFloat("Latitude", &latitude);
+                ImGui::InputFloat("Longitude", &longitude);
+                ImGui::InputInt("Year", &year);
+                ImGui::InputInt("Month", &month);
+                ImGui::InputInt("Day", &day);
+
+                {
+                    float utcOffset = longitude / 15.0f;
+                    float utc = timeOfDay - utcOffset;
+                    int uh = static_cast<int>(utc);
+                    int um = static_cast<int>((utc - uh) * 60.0f);
+                    float us = ((utc - uh) * 60.0f - um) * 60.0f;
+                    SolarResult sr =
+                        SolarPosition::calculate(latitude, longitude, year, month, day, uh, um, us);
+                    float elev = glm::pi<float>() / 2.0f - sr.zenith;
+                    ImGui::Text("Elevation: %.1f deg", glm::degrees(elev));
+                }
+                ImGui::End();
             }
 
-            // line below to update descriptorInfo
+            // line below to update GlobalUbo
             GlobalUbo ubo{};
 
             ubo.projection = camera.getProjectionMatrix();
@@ -223,17 +253,20 @@ void FirstApp::run() {
             ubo.fogDensity = skyRenderSystem.getFog().density;
             ubo.time = totalTime;
 
-            PointLightSystem.update(frameInfo, ubo);
+            float utcOffset = longitude / 15.0f;
+            float utc = timeOfDay - utcOffset;
+            int utcHour = static_cast<int>(utc);
+            int utcMinute = static_cast<int>((utc - utcHour) * 60.0f);
+            float utcSecond = ((utc - utcHour) * 60.0f - utcMinute) * 60.0f;
 
-            for (auto &kv : gameObjects) {
-                auto &obj = kv.second;
-                if (obj.pointLight && obj.pointLight->lightIntensity > 100.f) {
-                    glm::vec3 sunDir = glm::normalize(obj.transform.translation);
-                    skyRenderSystem.getPush().sunDirection = glm::vec4(sunDir, 0.f);
-                    oceanRenderSystem.getOceanUbo().sunDirection = glm::vec4(sunDir, 0.f);
-                    break;
-                }
-            }
+            SolarResult solarResult = SolarPosition::calculate(latitude, longitude, year, month, day, utcHour,
+                                                               utcMinute, utcSecond);
+            float elevation = glm::pi<float>() / 2.0f - solarResult.zenith;
+            glm::vec3 sunDirection = SolarPosition::toDirection(solarResult);
+
+            ubo.sunDirection = glm::vec4(-sunDirection, elevation);
+
+            PointLightSystem.update(frameInfo, ubo);
 
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
             uboBuffers[frameIndex]->flush();

@@ -19,6 +19,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 ambientLightColor;
     PointLight pointlights[10];
     int numLights;
+    vec4 sunDirection;
     vec4 fogColor;
     float fogNear;
     float fogFar;
@@ -61,10 +62,23 @@ void main() {
         specularLight += intensity * blinnTerm; 
     }
 
-    vec3 texColor = texture(texSampler, fragTexCoord).rgb;
+    vec3 sunDir = normalize(ubo.sunDirection.xyz);
+    float NdotL_sun = max(dot(surfaceNormal, sunDir), 0.0);
+    float sunVis = clamp(ubo.sunDirection.w, 0.0, 1.0);
+    // TODO customize it add it to global ubo
+    vec3 sunColor = vec3(1.0, 0.95, 0.82);
+    diffuseLight += sunColor * NdotL_sun * 0.5 * sunVis;
 
+    // sun blinn
+    vec3 sunHalf = normalize(sunDir + viewDirection);
+    float sunBlinn = pow(max(dot(surfaceNormal, sunHalf), 0.0), 256.0);
+    specularLight += sunColor * sunBlinn * 0.2 * sunVis;
+
+    // apply texture
+    vec3 texColor = texture(texSampler, fragTexCoord).rgb;
     vec3 litColor  = diffuseLight * texColor * fragColor + specularLight * fragColor;
 
+    // fog
     float dist = length(cameraPosWorld - fragPosWorld);
     float t = (dist - ubo.fogNear) / max(ubo.fogFar - ubo.fogNear, 0.001);
     float linearFog = clamp(t, 0.0, 1.0);

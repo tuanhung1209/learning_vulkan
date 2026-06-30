@@ -15,6 +15,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
     vec4 ambientLightColor;
     PointLight pointlights[10];
     int numLights;
+    vec4 sunDirection;
     vec4 fogColor;
     float fogNear;
     float fogFar;

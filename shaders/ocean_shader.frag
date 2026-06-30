@@ -19,6 +19,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
     vec4 ambientLightColor;
     PointLight pointlights[10];
     int numLights;
+    vec4 sunDirection;
     vec4 fogColor;
     float fogNear;
     float fogFar;
@@ -38,7 +39,6 @@ struct WaterWave {
 
 layout(set = 1, binding = 0) uniform OceanUbo {
     WaterWave waves[MAX_OCEAN_WAVES];
-    vec4 sunDirection;
     vec4 horizonColor;
     vec4 skyColor;
     vec4 deepColor;
@@ -64,7 +64,9 @@ void main() {
     vec2 uv = vec2(atan(R.z, R.x) / (2.0 * PI) + 0.5, asin(clamp(R.y, -1.0, 1.0)) / PI + 0.5);
     vec3 reflectedColor = texture(skySampler, uv).rgb;
 
-    vec3 sunDir = normalize(oceanUbo.sunDirection.xyz);
+    vec3 sunDir = normalize(ubo.sunDirection.xyz);
+    float sunVis = clamp(ubo.sunDirection.w, 0.0, 1.0);
+
     vec3 H = normalize(sunDir + V);
     float sunSpec = pow(max(dot(N, H), 0.0), 512.0);
     vec3 sunColor = vec3(1.0, 0.98, 0.92);
@@ -81,7 +83,7 @@ void main() {
     }
 
     vec3 waterColor = mix(oceanUbo.deepColor.rgb, reflectedColor, fresnel);
-    vec3 litColor = waterColor + sunSpec * sunColor + specularLight;
+    vec3 litColor = waterColor + sunSpec * sunColor * sunVis + specularLight;
 
     float dist = length(cameraPos - fragWorldPos);
     float t = (dist - ubo.fogNear) / max(ubo.fogFar - ubo.fogNear, 0.001);
