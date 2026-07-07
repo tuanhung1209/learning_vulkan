@@ -1,20 +1,21 @@
-// add frame relevant data into a single object
 #pragma once
 
 #include "game/my_game_object.hpp"
-#include "game/terrain_generation.hpp"
 #include "render_core/my_camera.hpp"
 
-namespace my {
-#define MAX_LIGHT 10
-#define MAX_BULLET 100
-#define MAX_OCEAN_WAVES 16
-#define MAX_GRASS_GRID 4096
+#include <vulkan/vulkan.h>
 
-struct alignas(16) GrassTransformData {
-    glm::vec4 translation{};
-    glm::vec2 scale{1.f};
-};
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/common.hpp>
+#include <glm/glm.hpp>
+
+constexpr int MAX_LIGHT = 10;
+constexpr int MAX_BULLET = 100;
+constexpr int MAX_OCEAN_WAVES = 16;
+constexpr int MAX_GRASS_GRID = 4096;
+
+namespace my {
 
 struct PointLight {
     glm::vec4 position{};
@@ -48,65 +49,6 @@ struct FrameInfo {
 struct SimplePushConstantData {
     glm::mat4 modelMatrix{1.f};
     glm::mat4 normalMatrix{1.f};
-};
-
-struct FogSettingsUbo {
-    float near{80.f};
-    float far{600.f};
-    float density{1.f};
-};
-
-struct SkyPush {
-    alignas(16) glm::vec4 horizonColor{0.05f, 0.3f, 1.f, 1.f};
-    glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};
-    glm::vec4 skyTextureColor{0.941f, 0.322f, 0.875f, 1.0f};
-};
-
-struct WaterWave {
-    alignas(16) glm::vec2 direction{1.f, 0.f};
-    float frequency{1.f};
-    float amplitude{0.5f};
-    float steepness{0.5f};
-    float speed{1.f};
-};
-
-struct OceanUbo {
-    WaterWave waves[MAX_OCEAN_WAVES];
-    alignas(16) glm::vec4 horizonColor{0.05f, 0.3f, 1.f, 1.f};
-    alignas(16) glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};
-    alignas(16) glm::vec4 deepColor{0.01f, 0.05f, 0.15f, 1.f};
-};
-
-struct GrassComputePush {
-    // Grass
-    uint32_t gridSize{512};
-    uint32_t terrainResolution{512};
-    float heightScale{120.0f};
-    float spacing{0.125f};
-    float bladeHeight{1.0f};
-    // Wind
-    float windDirX{1.0f};
-    float windDirZ{0.3f};
-    float windFreq{1.15f};
-    float windAmplitude{0.8f};
-    float turbPower{0.4f};
-    float turbSize{0.03f};
-    float droopStrength{0.35f};
-    float xPeriod{0.05f};
-    float yPeriod{0.1f};
-    float windBias{0.65f};
-    // Color
-    alignas(16) glm::vec4 baseColor{0.02f, 0.18f, 0.01f, 1.0f};
-    alignas(16) glm::vec4 tipColor{0.1f, 0.55f, 0.08f, 1.0f};
-};
-
-struct SceneEntityRef {
-    MyGameObject::Map &gameObjects;
-    MyGameObject::id_t playerId;
-    TerrainGenerator::TerrainConfig &terrainConfig;
-    SkyPush &skyConfig;
-    GrassComputePush &grassConfig;
-    OceanUbo &oceanConfig;
 };
 
 } // namespace my

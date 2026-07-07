@@ -1,15 +1,15 @@
 #pragma once
-#include "game/my_game_object.hpp"
-#include "render_core/my_model.hpp"
-#include "render_core/my_texture.hpp"
-#include "vulkan_core/device.hpp"
 
-#include <glm/common.hpp>
+#include "game/my_game_object.hpp"
+
 #include <glm/glm.hpp>
 #include <memory>
 #include <vector>
 
 namespace my {
+
+class Device;
+class MyModel;
 
 class TerrainGenerator {
   public:

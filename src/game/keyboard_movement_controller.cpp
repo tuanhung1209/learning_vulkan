@@ -1,5 +1,8 @@
 #include "game/keyboard_movement_controller.hpp"
+
 #include "input/input_state.hpp"
+#include "game/my_game_object.hpp"
+
 #include <limits>
 
 namespace my {

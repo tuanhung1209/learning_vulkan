@@ -1,10 +1,8 @@
 #pragma once
 
-#include "my_abundance_object_handler.hpp"
 #include "my_game_object.hpp"
 #include "platforms/glfw_window.hpp"
 #include "platforms/wayland/wayland_window.hpp"
-#include "render_core/my_camera.hpp"
 #include "render_core/my_renderer.hpp"
 #include "vulkan_core/device.hpp"
 #include "vulkan_core/my_descriptors.hpp"

@@ -1,9 +1,15 @@
 #pragma once
 
 #include "my_game_object.hpp"
-#include "render_core/my_frame_info.hpp"
+
+#include <vector>
+#include <memory>
+#include <vulkan/vulkan.h>
 
 namespace my {
+
+class Device;
+class MyModel;
 
 class BulletHandler {
   public:

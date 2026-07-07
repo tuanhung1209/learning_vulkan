@@ -1,18 +1,14 @@
 #include "render_systems/grass_render_system.hpp"
-#include "imgui.h"
-#include "render_core/my_frame_info.hpp"
-#include "render_core/my_imgui.hpp"
+
+#include "vulkan_core/device.hpp"
+#include "render_core/my_model.hpp"
+#include "vulkan_core/my_buffer.hpp"
+#include "vulkan_core/graphic_pipeline.hpp"
 #include "vulkan_core/compute_pipeline.hpp"
-#include "vulkan_core/my_descriptors.hpp"
 #include "vulkan_core/swap_chain.hpp"
+#include "render_core/my_imgui.hpp" // IWYU pragma: keep
 
-#include <array>
-#include <memory>
 #include <stdexcept>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
-#include <vulkan/vulkan_core.h>
 
 namespace my {
 

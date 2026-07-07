@@ -1,17 +1,12 @@
 #include "render_systems/simple_render_system.hpp"
-#include "render_core/my_frame_info.hpp"
-#include "vulkan_core/my_descriptors.hpp"
-#include "vulkan_core/swap_chain.hpp"
-#include <GLFW/glfw3.h>
 
-#include <array>
-#include <memory>
+#include "vulkan_core/device.hpp"
+#include "render_core/my_texture.hpp"
+#include "render_core/my_model.hpp" // IWYU pragma: keep
+#include "vulkan_core/graphic_pipeline.hpp"
+
 #include <stdexcept>
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
 namespace my {
 
 SimpleRenderSystem::SimpleRenderSystem(Device &device, VkRenderPass renderPass,

@@ -1,4 +1,7 @@
 #include "game/terrain_generation.hpp"
+
+#include "vulkan_core/device.hpp"
+#include "render_core/my_model.hpp"
 #include "math/perlin_noise.hpp"
 
 #include <glm/glm.hpp>

@@ -1,14 +1,18 @@
 #include "render_systems/point_light_system.hpp"
-#include <GLFW/glfw3.h>
 
-#include <array>
+#include "vulkan_core/device.hpp"
+#include "vulkan_core/graphic_pipeline.hpp"
+
 #include <memory>
+#include <vector>
 #include <stdexcept>
+#include <vulkan/vulkan.h>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
+
 namespace my {
 
 struct PointLightPushConstants {
@@ -24,7 +28,9 @@ PointLightSystem::PointLightSystem(Device &device, VkRenderPass renderPass,
     createGraphicPipeline(renderPass);
 }
 
-PointLightSystem::~PointLightSystem() { vkDestroyPipelineLayout(myDevice.device(), graphicPipelineLayout, nullptr); }
+PointLightSystem::~PointLightSystem() {
+    vkDestroyPipelineLayout(myDevice.device(), graphicPipelineLayout, nullptr);
+}
 
 void PointLightSystem::createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
     VkPushConstantRange pushConstantRange{};
@@ -57,7 +63,7 @@ void PointLightSystem::createGraphicPipeline(VkRenderPass renderPass) {
     pipelineConfig.renderPass = renderPass;
     pipelineConfig.pipelineLayout = graphicPipelineLayout;
     myGraphicPipeline = std::make_unique<GraphicPipeline>(myDevice, "shaders/point_light.vert.spv",
-                                            "shaders/point_light.frag.spv", pipelineConfig);
+                                                          "shaders/point_light.frag.spv", pipelineConfig);
 }
 
 void PointLightSystem::update(FrameInfo &frameInfo, GlobalUbo &ubo) {
@@ -83,8 +89,8 @@ void PointLightSystem::update(FrameInfo &frameInfo, GlobalUbo &ubo) {
 void PointLightSystem::renderLight(FrameInfo &frameInfo) {
     myGraphicPipeline->bind(frameInfo.commandBuffer);
 
-    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout, 0, 1,
-                            &frameInfo.globalDescriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout,
+                            0, 1, &frameInfo.globalDescriptorSet, 0, nullptr);
 
     for (auto &kv : frameInfo.gameObjecs) {
         auto &obj = kv.second;

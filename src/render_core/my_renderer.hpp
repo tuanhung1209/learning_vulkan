@@ -1,17 +1,17 @@
 #pragma once
 
 #include "platforms/display_provider.hpp"
-#include "vulkan_core/device.hpp"
 #include "vulkan_core/render_target.hpp"
 #include "vulkan_core/swap_chain.hpp"
 
 #include <cassert>
-#include <functional>
 #include <memory>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
 namespace my {
+
+class Device;
 
 class MyRenderer {
   public:

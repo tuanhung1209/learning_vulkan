@@ -1,18 +1,12 @@
 #include "render_systems/sky_render_system.hpp"
-#include "render_core/my_frame_info.hpp"
-#include "vulkan_core/my_descriptors.hpp"
-#include "vulkan_core/swap_chain.hpp"
+#include "vulkan_core/graphic_pipeline.hpp"
+#include "render_core/my_model.hpp"
+#include "render_core/my_texture.hpp"
 
-#include <array>
 #include <imgui.h>
-#include <memory>
 #include <stdexcept>
-#include <vulkan/vulkan_core.h>
+#include <memory>
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
 namespace my {
 
 SkyRenderSystem::SkyRenderSystem(Device &device, VkRenderPass renderPass,
@@ -95,7 +89,6 @@ void SkyRenderSystem::createGraphicPipeline(VkRenderPass renderPass) {
 
 void SkyRenderSystem::drawGui() {
     ImGui::Begin("Sky");
-    ImGui::ColorPicker4("Horizon Color", &push.horizonColor.x);
     ImGui::ColorPicker4("Sky Color", &push.skyColor.x);
     ImGui::ColorPicker4("Sky TColor", &push.skyTextureColor.x);
     ImGui::SeparatorText("Fog");

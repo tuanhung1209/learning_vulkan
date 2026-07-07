@@ -1,6 +1,5 @@
 #include "glfw_window.hpp"
 #include <stdexcept>
-#include <string>
 
 namespace my {
 

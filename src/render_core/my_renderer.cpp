@@ -1,19 +1,15 @@
-// #include <GLFW/glfw3.h>
 #include "render_core/my_renderer.hpp"
-#include "platforms/display_provider.hpp"
-#include "render_core/my_frame_info.hpp"
+
+#include "vulkan_core/device.hpp"
 #include "vulkan_core/render_target.hpp"
 #include "vulkan_core/swap_chain.hpp"
+#include "platforms/display_provider.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
-#include <memory>
 #include <stdexcept>
-#include <vector>
-#include <vulkan/vulkan_core.h>
 
 namespace my {
 

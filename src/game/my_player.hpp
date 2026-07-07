@@ -3,10 +3,7 @@
 #include "game/keyboard_movement_controller.hpp"
 #include "game/my_abundance_object_handler.hpp"
 #include "game/my_game_object.hpp"
-#include "input/input_state.hpp"
 #include "render_core/my_camera.hpp"
-
-#include <vector>
 
 namespace my {
 

@@ -1,39 +1,22 @@
 #include "game/first_app.hpp"
-#include "game/keyboard_movement_controller.hpp"
+
 #include "game/my_player.hpp"
-#include "game/physics_utils.hpp"
-#include "game/scene_file_panel.hpp"
 #include "game/terrain_generation.hpp"
-#include "imgui.h"
+#include "game/scene_file_panel.hpp"
+#include "game/scene_reference.hpp"
+#include "game/sun_panel.hpp"
+#include "game/gui_manager.hpp"
+#include "game/my_save_system.hpp"
+#include "vulkan_core/my_buffer.hpp"
 #include "input/glfw_input_bridge.hpp"
-#include "input/input_state.hpp"
-#include "math/NOAA_solar_position.hpp"
-#include "my_save_system.hpp"
-#include "render_core/my_frame_info.hpp"
+
+#include "render_core/my_model.hpp"
 #include "render_core/my_imgui.hpp"
-#include "render_core/my_texture.hpp"
 #include "render_systems/grass_render_system.hpp"
 #include "render_systems/ocean_render_system.hpp"
+#include "render_systems/sky_render_system.hpp"
 #include "render_systems/point_light_system.hpp"
 #include "render_systems/simple_render_system.hpp"
-#include "render_systems/sky_render_system.hpp"
-#include "vulkan_core/my_buffer.hpp"
-#include "vulkan_core/swap_chain.hpp"
-
-#include <GLFW/glfw3.h>
-#include <chrono>
-#include <cstdio>
-#include <glm/common.hpp>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <vector>
-#include <vulkan/vulkan_core.h>
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
 
 namespace my {
 
@@ -62,7 +45,6 @@ FirstApp::FirstApp(Mode mode) : mode_(mode) {
                      .setMaxSets(SwapChain::MAX_FRAMES_IN_FLIGHT)
                      .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SwapChain::MAX_FRAMES_IN_FLIGHT)
                      .build();
-    loadGameObjects();
 }
 
 FirstApp::~FirstApp() {
@@ -118,11 +100,14 @@ void FirstApp::run() {
     SaveSystem saveSystem{*device};
     SceneFilePanel sceneFilePanel{};
 
+    GuiManager guiManager{};
+    guiManager.registerGuiPanel(std::make_unique<SunPanel>());
+
     std::shared_ptr<MyModel> bulletModel = MyModel::createModelFromFile(*device, "assets/models/cube.obj");
     BulletHandler bulletHandler{bulletModel};
 
     InputState inputState{};
-    std::unique_ptr<GlfwInput> glfwInput;
+    std::unique_ptr<GlfwInput> glfwInput{};
     if (mode_ == Mode::Edit) { glfwInput = std::make_unique<GlfwInput>(*glfwWindow, inputState); }
 
     MyCamera camera{};
@@ -132,8 +117,6 @@ void FirstApp::run() {
     auto playerId = playerObject.getId();
     gameObjects.emplace(playerId, std::move(playerObject));
     MyPlayer mainPlayer{camera, playerId, inputState};
-
-    PhysicsWorld physicsWorld;
 
     SceneEntityRef sceneRef{gameObjects,
                             playerId,
@@ -148,14 +131,6 @@ void FirstApp::run() {
 
     auto currentTime = std::chrono::high_resolution_clock::now();
     float totalTime = 0.f;
-
-    // TEST :
-    float timeOfDay = 10.5f;
-    float latitude = 21.0278f;
-    float longitude = 105.8342f;
-    int year = 2026;
-    int month = 6;
-    int day = 23;
 
     while (mode_ == Mode::Wallpaper ? !waylandWindow->shouldClose() : !glfwWindow->shouldClose()) {
         if (mode_ == Mode::Wallpaper) {
@@ -174,7 +149,6 @@ void FirstApp::run() {
 
         mainPlayer.update(inputState, frameTime, gameObjects, bulletHandler);
         bulletHandler.update(frameTime);
-        physicsWorld.step(gameObjects, bulletHandler.getBullets(), frameTime);
 
         float aspect = myRenderer->getAspectRatio();
         camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 10000.f);
@@ -183,6 +157,8 @@ void FirstApp::run() {
             int frameIndex = myRenderer->getFrameIndex();
             FrameInfo frameInfo{frameIndex, frameTime, commandBuffer, camera, globalDescriptorSet[frameIndex],
                                 gameObjects};
+
+            guiManager.updatePanels(sceneRef);
 
             if (guiRenderSystem) {
                 guiRenderSystem->newFrame();
@@ -217,27 +193,7 @@ void FirstApp::run() {
                 skyRenderSystem.drawGui();
                 oceanRenderSystem.drawGui();
 
-                ImGui::Begin("Sun");
-                ImGui::SliderFloat("Time of Day (hours)", &timeOfDay, 0.0f, 24.0f);
-                ImGui::Separator();
-                ImGui::InputFloat("Latitude", &latitude);
-                ImGui::InputFloat("Longitude", &longitude);
-                ImGui::InputInt("Year", &year);
-                ImGui::InputInt("Month", &month);
-                ImGui::InputInt("Day", &day);
-
-                {
-                    float utcOffset = longitude / 15.0f;
-                    float utc = timeOfDay - utcOffset;
-                    int uh = static_cast<int>(utc);
-                    int um = static_cast<int>((utc - uh) * 60.0f);
-                    float us = ((utc - uh) * 60.0f - um) * 60.0f;
-                    SolarResult sr =
-                        SolarPosition::calculate(latitude, longitude, year, month, day, uh, um, us);
-                    float elev = glm::pi<float>() / 2.0f - sr.zenith;
-                    ImGui::Text("Elevation: %.1f deg", glm::degrees(elev));
-                }
-                ImGui::End();
+                guiManager.drawGuiPanel(sceneRef);
             }
 
             // line below to update GlobalUbo
@@ -247,24 +203,14 @@ void FirstApp::run() {
             ubo.view = camera.getView();
             ubo.inverseView = camera.getInverseView();
 
-            ubo.fogColor = skyRenderSystem.getPush().horizonColor;
+            ubo.fogColor = skyRenderSystem.getFog().fogColor;
             ubo.fogNear = skyRenderSystem.getFog().near;
             ubo.fogFar = skyRenderSystem.getFog().far;
             ubo.fogDensity = skyRenderSystem.getFog().density;
+
             ubo.time = totalTime;
 
-            float utcOffset = longitude / 15.0f;
-            float utc = timeOfDay - utcOffset;
-            int utcHour = static_cast<int>(utc);
-            int utcMinute = static_cast<int>((utc - utcHour) * 60.0f);
-            float utcSecond = ((utc - utcHour) * 60.0f - utcMinute) * 60.0f;
-
-            SolarResult solarResult = SolarPosition::calculate(latitude, longitude, year, month, day, utcHour,
-                                                               utcMinute, utcSecond);
-            float elevation = glm::pi<float>() / 2.0f - solarResult.zenith;
-            glm::vec3 sunDirection = SolarPosition::toDirection(solarResult);
-
-            ubo.sunDirection = glm::vec4(-sunDirection, elevation);
+            ubo.sunDirection = sceneRef.sunDirection;
 
             PointLightSystem.update(frameInfo, ubo);
 
@@ -294,17 +240,6 @@ void FirstApp::run() {
     vkDeviceWaitIdle(device->device());
 }
 
-void FirstApp::loadGameObjects() {
-    auto grassTexture = std::make_shared<MyTexture>(*device, "assets/textures/grass.png");
-    auto waterTexture = std::make_shared<MyTexture>(*device, "assets/textures/water.jpg");
-
-    std::shared_ptr<MyModel> cubeModel =
-        MyModel::createModelFromFile(*device, "assets/models/colored_cube.obj");
-    std::shared_ptr<MyModel> quadModel = MyModel::createModelFromFile(*device, "assets/models/quad.obj");
-    std::shared_ptr<MyModel> smoothVase =
-        MyModel::createModelFromFile(*device, "assets/models/smooth_vase.obj");
-    std::shared_ptr<MyModel> roughVase = MyModel::createModelFromFile(*device, "assets/models/flat_vase.obj");
-    std::shared_ptr<MyModel> sphereModel = MyModel::createModelFromFile(*device, "assets/models/sphere.obj");
-}
+void FirstApp::loadGameObjects() {}
 
 } // namespace my

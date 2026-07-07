@@ -1,6 +1,5 @@
 #include "vulkan_core/render_target.hpp"
 #include "vulkan_core/swap_chain.hpp"
-#include <limits>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 

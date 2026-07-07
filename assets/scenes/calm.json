@@ -1,0 +1,788 @@
+{
+    "gameObjects": [
+        {
+            "id": 115,
+            "modelFilePath": "",
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    0.0,
+                    0.5,
+                    0.0
+                ]
+            }
+        },
+        {
+            "id": 15,
+            "modelFilePath": "",
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    0.0,
+                    0.5,
+                    0.0
+                ]
+            }
+        },
+        {
+            "id": 14,
+            "modelFilePath": "",
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.7853981852531433,
+                    1.5707963705062866
+                ],
+                "scale": [
+                    2.0,
+                    2.0,
+                    2.0
+                ],
+                "translation": [
+                    4.0,
+                    -2.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "id": 114,
+            "modelFilePath": "",
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    0.0,
+                    0.5,
+                    0.0
+                ]
+            }
+        },
+        {
+            "id": 12,
+            "modelFilePath": "",
+            "pointLight": {
+                "color": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "lightIntensity": 0.20000000298023224
+            },
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.10000000149011612,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    -0.2750489115715027,
+                    -1.0,
+                    1.387199878692627
+                ]
+            }
+        },
+        {
+            "id": 116,
+            "modelFilePath": "",
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    0.0,
+                    0.5,
+                    0.0
+                ]
+            }
+        },
+        {
+            "id": 0,
+            "modelFilePath": "assets/models/smooth_vase.obj",
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    5.0,
+                    5.0,
+                    5.0
+                ],
+                "translation": [
+                    -1.5,
+                    0.0,
+                    0.0
+                ]
+            }
+        },
+        {
+            "id": 117,
+            "modelFilePath": "",
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    0.0,
+                    0.5,
+                    0.0
+                ]
+            }
+        },
+        {
+            "id": 1,
+            "modelFilePath": "assets/models/flat_vase.obj",
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    5.0,
+                    5.0,
+                    5.0
+                ],
+                "translation": [
+                    1.5,
+                    0.0,
+                    0.0
+                ]
+            }
+        },
+        {
+            "id": 2,
+            "modelFilePath": "assets/models/sphere.obj",
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    5.0,
+                    5.0,
+                    5.0
+                ],
+                "translation": [
+                    1.5,
+                    -4.0,
+                    2.0
+                ]
+            }
+        },
+        {
+            "id": 3,
+            "modelFilePath": "assets/models/colored_cube.obj",
+            "rigidBody": {
+                "angularDamping": 2.0,
+                "angularVelocity": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "friction": 0.6000000238418579,
+                "linearDamping": 0.5,
+                "mass": 1.0,
+                "restitution": 0.10000000149011612,
+                "velocity": [
+                    0.0,
+                    19.558929443359375,
+                    0.0
+                ]
+            },
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.5,
+                    0.5,
+                    0.5
+                ],
+                "translation": [
+                    -0.5,
+                    455.5841369628906,
+                    1.0
+                ]
+            }
+        },
+        {
+            "id": 4,
+            "modelFilePath": "assets/models/colored_cube.obj",
+            "rigidBody": {
+                "angularDamping": 2.0,
+                "angularVelocity": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "friction": 0.6000000238418579,
+                "linearDamping": 0.5,
+                "mass": 2.0,
+                "restitution": 0.10000000149011612,
+                "velocity": [
+                    0.0,
+                    19.558929443359375,
+                    0.0
+                ]
+            },
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.5,
+                    0.5,
+                    0.5
+                ],
+                "translation": [
+                    0.5,
+                    443.583984375,
+                    1.0
+                ]
+            }
+        },
+        {
+            "id": 5,
+            "modelFilePath": "",
+            "pointLight": {
+                "color": [
+                    1.0,
+                    0.949999988079071,
+                    0.800000011920929
+                ],
+                "lightIntensity": 2500000.0
+            },
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    8.0,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    256.0,
+                    -2000.0,
+                    256.0
+                ]
+            }
+        },
+        {
+            "id": 6,
+            "modelFilePath": "",
+            "pointLight": {
+                "color": [
+                    1.0,
+                    0.10000000149011612,
+                    0.10000000149011612
+                ],
+                "lightIntensity": 0.20000000298023224
+            },
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.10000000149011612,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    -0.5203149914741516,
+                    -1.0,
+                    -1.3150180578231812
+                ]
+            }
+        },
+        {
+            "id": 7,
+            "modelFilePath": "",
+            "pointLight": {
+                "color": [
+                    0.10000000149011612,
+                    0.10000000149011612,
+                    1.0
+                ],
+                "lightIntensity": 0.20000000298023224
+            },
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.10000000149011612,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    0.8786802887916565,
+                    -1.0,
+                    -1.1081136465072632
+                ]
+            }
+        },
+        {
+            "id": 8,
+            "modelFilePath": "",
+            "pointLight": {
+                "color": [
+                    0.10000000149011612,
+                    1.0,
+                    0.10000000149011612
+                ],
+                "lightIntensity": 0.20000000298023224
+            },
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.10000000149011612,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    1.3989953994750977,
+                    -0.9999999403953552,
+                    0.20690277218818665
+                ]
+            }
+        },
+        {
+            "id": 9,
+            "modelFilePath": "",
+            "pointLight": {
+                "color": [
+                    1.0,
+                    1.0,
+                    0.10000000149011612
+                ],
+                "lightIntensity": 0.20000000298023224
+            },
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.10000000149011612,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    0.5203155279159546,
+                    -1.0,
+                    1.3150180578231812
+                ]
+            }
+        },
+        {
+            "id": 10,
+            "modelFilePath": "",
+            "pointLight": {
+                "color": [
+                    0.10000000149011612,
+                    1.0,
+                    1.0
+                ],
+                "lightIntensity": 0.20000000298023224
+            },
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.10000000149011612,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    -0.8786802887916565,
+                    -1.0,
+                    1.1081136465072632
+                ]
+            }
+        },
+        {
+            "id": 11,
+            "modelFilePath": "",
+            "pointLight": {
+                "color": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "lightIntensity": 0.20000000298023224
+            },
+            "textureFilePath": "",
+            "transform": {
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.10000000149011612,
+                    1.0,
+                    1.0
+                ],
+                "translation": [
+                    -1.398996114730835,
+                    -1.0,
+                    -0.20690426230430603
+                ]
+            }
+        }
+    ],
+    "grass": {
+        "baseColor": [
+            0.8235294222831726,
+            0.7947745323181152,
+            0.6782007217407227,
+            1.0
+        ],
+        "bladeHeight": 3.378999948501587,
+        "droopStrength": 0.3889999985694885,
+        "gridSize": 809,
+        "heightScale": 67.62899780273438,
+        "spacing": 0.17599999904632568,
+        "terrainResolution": 512,
+        "tipColor": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        ],
+        "turbPower": 0.6000000238418579,
+        "turbSize": 0.04899999871850014,
+        "windAmplitude": 0.984000027179718,
+        "windBias": 0.699999988079071,
+        "windDirX": 1.0,
+        "windDirZ": 0.30000001192092896,
+        "windFreq": 1.7170000076293945,
+        "xPeriod": 0.05000000074505806,
+        "yPeriod": 0.10000000149011612
+    },
+    "ocean": {
+        "deepColor": [
+            0.009999999776482582,
+            0.07999999821186066,
+            0.18000000715255737,
+            1.0
+        ],
+        "horizonColor": [
+            0.05999999865889549,
+            0.30000001192092896,
+            0.550000011920929,
+            1.0
+        ],
+        "skyColor": [
+            0.8799999952316284,
+            0.11999999731779099,
+            0.550000011920929,
+            1.0
+        ],
+        "sunDirection": [
+            0.12595301866531372,
+            -0.9840079545974731,
+            0.12595301866531372,
+            0.0
+        ],
+        "waves": [
+            {
+                "amplitude": 0.6000000238418579,
+                "direction": [
+                    1.0,
+                    0.0
+                ],
+                "frequency": 0.07999999821186066,
+                "speed": 0.5,
+                "steepness": 0.07999999821186066
+            },
+            {
+                "amplitude": 0.5,
+                "direction": [
+                    0.7070000171661377,
+                    0.7070000171661377
+                ],
+                "frequency": 0.11999999731779099,
+                "speed": 0.6000000238418579,
+                "steepness": 0.09000000357627869
+            },
+            {
+                "amplitude": 0.4000000059604645,
+                "direction": [
+                    0.0,
+                    1.0
+                ],
+                "frequency": 0.17000000178813934,
+                "speed": 0.7200000286102295,
+                "steepness": 0.10000000149011612
+            },
+            {
+                "amplitude": 0.3199999928474426,
+                "direction": [
+                    -0.7070000171661377,
+                    0.7070000171661377
+                ],
+                "frequency": 0.23000000417232513,
+                "speed": 0.8399999737739563,
+                "steepness": 0.10000000149011612
+            },
+            {
+                "amplitude": 0.25,
+                "direction": [
+                    -1.0,
+                    0.0
+                ],
+                "frequency": 0.30000001192092896,
+                "speed": 0.9599999785423279,
+                "steepness": 0.10999999940395355
+            },
+            {
+                "amplitude": 0.20000000298023224,
+                "direction": [
+                    -0.7070000171661377,
+                    -0.7070000171661377
+                ],
+                "frequency": 0.38999998569488525,
+                "speed": 1.100000023841858,
+                "steepness": 0.10999999940395355
+            },
+            {
+                "amplitude": 0.1599999964237213,
+                "direction": [
+                    0.0,
+                    -1.0
+                ],
+                "frequency": 0.5,
+                "speed": 1.25,
+                "steepness": 0.11999999731779099
+            },
+            {
+                "amplitude": 0.12999999523162842,
+                "direction": [
+                    0.7070000171661377,
+                    -0.7070000171661377
+                ],
+                "frequency": 0.6299999952316284,
+                "speed": 1.399999976158142,
+                "steepness": 0.11999999731779099
+            },
+            {
+                "amplitude": 0.10000000149011612,
+                "direction": [
+                    0.8659999966621399,
+                    0.5
+                ],
+                "frequency": 0.7799999713897705,
+                "speed": 1.5499999523162842,
+                "steepness": 0.12999999523162842
+            },
+            {
+                "amplitude": 0.07999999821186066,
+                "direction": [
+                    -0.5,
+                    0.8659999966621399
+                ],
+                "frequency": 0.9399999976158142,
+                "speed": 1.7200000286102295,
+                "steepness": 0.12999999523162842
+            },
+            {
+                "amplitude": 0.05999999865889549,
+                "direction": [
+                    -0.8659999966621399,
+                    -0.5
+                ],
+                "frequency": 1.1200000047683716,
+                "speed": 1.8799999952316284,
+                "steepness": 0.14000000059604645
+            },
+            {
+                "amplitude": 0.05000000074505806,
+                "direction": [
+                    0.5,
+                    -0.8659999966621399
+                ],
+                "frequency": 1.3200000524520874,
+                "speed": 2.049999952316284,
+                "steepness": 0.14000000059604645
+            },
+            {
+                "amplitude": 0.03999999910593033,
+                "direction": [
+                    0.34200000762939453,
+                    0.9399999976158142
+                ],
+                "frequency": 1.5499999523162842,
+                "speed": 2.2200000286102295,
+                "steepness": 0.15000000596046448
+            },
+            {
+                "amplitude": 0.029999999329447746,
+                "direction": [
+                    -0.9399999976158142,
+                    0.34200000762939453
+                ],
+                "frequency": 1.7999999523162842,
+                "speed": 2.4000000953674316,
+                "steepness": 0.15000000596046448
+            },
+            {
+                "amplitude": 0.02500000037252903,
+                "direction": [
+                    -0.34200000762939453,
+                    -0.9399999976158142
+                ],
+                "frequency": 2.0799999237060547,
+                "speed": 2.5799999237060547,
+                "steepness": 0.1599999964237213
+            },
+            {
+                "amplitude": 0.019999999552965164,
+                "direction": [
+                    0.9399999976158142,
+                    -0.34200000762939453
+                ],
+                "frequency": 2.380000114440918,
+                "speed": 2.75,
+                "steepness": 0.1599999964237213
+            }
+        ]
+    },
+    "player": {
+        "rotation": [
+            -0.006433309521526098,
+            3.0469915866851807,
+            0.0
+        ],
+        "translation": [
+            -51.997772216796875,
+            -18.813264846801758,
+            211.94078063964844
+        ]
+    },
+    "sky": {
+        "horizonColor": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        ],
+        "skyColor": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        ],
+        "skyTextureColor": [
+            0.6363636255264282,
+            0.12931454181671143,
+            0.12931454181671143,
+            1.0
+        ],
+        "sunDirection": [
+            0.12595301866531372,
+            -0.9840079545974731,
+            0.12595301866531372,
+            0.0
+        ]
+    },
+    "terrain": {
+        "grassThreshold": 0.550000011920929,
+        "heightScale": 67.62899780273438,
+        "lacunarity": 2.0,
+        "noiseScale": 280.1340026855469,
+        "octaves": 10,
+        "persistence": 0.44999998807907104,
+        "resolution": 512,
+        "rockThreshold": 0.25,
+        "rotationAngle": 0.8203047513961792,
+        "sandThreshold": 0.9200000166893005,
+        "seed": 9
+    }
+}

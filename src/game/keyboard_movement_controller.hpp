@@ -1,10 +1,11 @@
 #pragma once
 
 #include "game/my_game_object.hpp"
-#include "input/input_state.hpp"
-#include "platforms/glfw_window.hpp"
 
 namespace my {
+
+class InputState;
+
 class KeyboardMovementController {
   public:
     void moveInPlaneXZ(const InputState &input, float dt, MyGameObject &gameObject);

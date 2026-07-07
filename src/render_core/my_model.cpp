@@ -23,15 +23,12 @@ template <> struct hash<my::MyModel::Vertex> {
 };
 
 } // namespace std
+
 namespace my {
+
 MyModel::MyModel(Device &device, const MyModel::Builder &builder) : myDevice{device} {
     createVertexBuffers(builder.vertices);
     createIndexBuffers(builder.indicies);
-
-    for (const auto &vert : builder.vertices) {
-        bound.min = glm::min(bound.min, vert.position);
-        bound.max = glm::max(bound.max, vert.position);
-    }
 }
 
 MyModel::~MyModel() {}

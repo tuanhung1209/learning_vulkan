@@ -2,9 +2,7 @@
 
 #include "platforms/glfw_window.hpp"
 #include "render_core/my_frame_info.hpp"
-#include "render_core/my_renderer.hpp"
 #include "vulkan_core/device.hpp"
-#include "vulkan_core/my_descriptors.hpp"
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>

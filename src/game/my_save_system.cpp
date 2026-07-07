@@ -1,12 +1,13 @@
 #include "my_save_system.hpp"
+
 #include "game/my_game_object.hpp"
 #include "lib/json.hpp"
-#include <fstream>
-#include <memory>
 
-using json = nlohmann::json;
+#include <fstream>
 
 namespace my {
+
+using json = nlohmann::json;
 
 SaveSystem::SaveSystem(Device &device) : myDevice{device} {};
 SaveSystem::~SaveSystem() {};
@@ -45,19 +46,6 @@ void SaveSystem::saveScene(const std::string &saveFilePath, SceneEntityRef scene
             jsonObj["pointLight"]["color"] = {obj.color.x, obj.color.y, obj.color.z};
         }
 
-        if (obj.rigidBody) {
-            jsonObj["rigidBody"]["velocity"] = {obj.rigidBody->velocity.x, obj.rigidBody->velocity.y,
-                                                obj.rigidBody->velocity.z};
-            jsonObj["rigidBody"]["angularVelocity"] = {obj.rigidBody->angularVelocity.x,
-                                                       obj.rigidBody->angularVelocity.y,
-                                                       obj.rigidBody->angularVelocity.z};
-            jsonObj["rigidBody"]["mass"] = obj.rigidBody->mass;
-            jsonObj["rigidBody"]["restitution"] = obj.rigidBody->restitution;
-            jsonObj["rigidBody"]["friction"] = obj.rigidBody->friction;
-            jsonObj["rigidBody"]["linearDamping"] = obj.rigidBody->linearDamping;
-            jsonObj["rigidBody"]["angularDamping"] = obj.rigidBody->angularDamping;
-        }
-
         jsonGameObjectArray.push_back(jsonObj);
     }
     sceneJson["gameObjects"] = jsonGameObjectArray;
@@ -81,8 +69,6 @@ void SaveSystem::saveScene(const std::string &saveFilePath, SceneEntityRef scene
     // Sky
     auto &skyPush = scene.skyConfig;
     json skyJson;
-    skyJson["horizonColor"] = {skyPush.horizonColor.x, skyPush.horizonColor.y, skyPush.horizonColor.z,
-                               skyPush.horizonColor.w};
     skyJson["skyColor"] = {skyPush.skyColor.x, skyPush.skyColor.y, skyPush.skyColor.z, skyPush.skyColor.w};
     skyJson["skyTextureColor"] = {skyPush.skyTextureColor.x, skyPush.skyTextureColor.y,
                                   skyPush.skyTextureColor.z, skyPush.skyTextureColor.w};
@@ -178,20 +164,6 @@ void SaveSystem::loadScene(const std::string &loadFilePath, SceneEntityRef scene
                          oldObj["pointLight"]["color"][2]};
         }
 
-        if (oldObj.contains("rigidBody")) {
-            obj.rigidBody = std::make_unique<RigidBodyComponent>();
-            obj.rigidBody->velocity = {oldObj["rigidBody"]["velocity"][0], oldObj["rigidBody"]["velocity"][1],
-                                       oldObj["rigidBody"]["velocity"][2]};
-            obj.rigidBody->angularVelocity = {oldObj["rigidBody"]["angularVelocity"][0],
-                                              oldObj["rigidBody"]["angularVelocity"][1],
-                                              oldObj["rigidBody"]["angularVelocity"][2]};
-            obj.rigidBody->mass = oldObj["rigidBody"]["mass"];
-            obj.rigidBody->restitution = oldObj["rigidBody"]["restitution"];
-            obj.rigidBody->friction = oldObj["rigidBody"]["friction"];
-            obj.rigidBody->linearDamping = oldObj["rigidBody"]["linearDamping"];
-            obj.rigidBody->angularDamping = oldObj["rigidBody"]["angularDamping"];
-        }
-
         scene.gameObjects.emplace(obj.getId(), std::move(obj));
     }
 
@@ -213,8 +185,6 @@ void SaveSystem::loadScene(const std::string &loadFilePath, SceneEntityRef scene
     // Sky
     auto &skyData = jsonScene["sky"];
     auto &skyPush = scene.skyConfig;
-    skyPush.horizonColor = {skyData["horizonColor"][0], skyData["horizonColor"][1],
-                            skyData["horizonColor"][2], skyData["horizonColor"][3]};
     skyPush.skyColor = {skyData["skyColor"][0], skyData["skyColor"][1], skyData["skyColor"][2],
                         skyData["skyColor"][3]};
     skyPush.skyTextureColor = {skyData["skyTextureColor"][0], skyData["skyTextureColor"][1],
@@ -241,7 +211,7 @@ void SaveSystem::loadScene(const std::string &loadFilePath, SceneEntityRef scene
     grassPush.baseColor = {grassData["baseColor"][0], grassData["baseColor"][1], grassData["baseColor"][2],
                            grassData["baseColor"][3]};
     grassPush.tipColor = {grassData["tipColor"][0], grassData["tipColor"][1], grassData["tipColor"][2],
-                           grassData["tipColor"][3]};
+                          grassData["tipColor"][3]};
 
     // Ocean
     if (jsonScene.contains("ocean")) {

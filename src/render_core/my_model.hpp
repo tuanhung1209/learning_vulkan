@@ -30,11 +30,6 @@ class MyModel {
         }
     };
 
-    struct AABB {
-        glm::vec3 min{std::numeric_limits<float>::max()};
-        glm::vec3 max{std::numeric_limits<float>::lowest()};
-    };
-
     struct Builder {
         std::vector<Vertex> vertices{};
         std::vector<uint32_t> indicies{};
@@ -49,7 +44,6 @@ class MyModel {
     MyModel(const MyModel &) = delete;
     MyModel &operator=(const MyModel &) = delete;
 
-    AABB getBound() const { return bound; }
     uint32_t getIndexCount() const { return indexCount; }
 
     static std::unique_ptr<MyModel> createModelFromFile(Device &device, const std::string filepath);
@@ -62,8 +56,6 @@ class MyModel {
     void createIndexBuffers(const std::vector<uint32_t> &indicies);
 
     Device &myDevice;
-
-    AABB bound;
 
     std::unique_ptr<MyBuffer> vertexBuffer;
     uint32_t vertexCount;

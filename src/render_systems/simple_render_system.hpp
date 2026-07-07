@@ -1,17 +1,16 @@
 #pragma once
 
-#include "game/my_game_object.hpp"
-#include "render_core/my_camera.hpp"
 #include "render_core/my_frame_info.hpp"
-#include "render_core/my_texture.hpp"
-#include "vulkan_core/device.hpp"
 #include "vulkan_core/my_descriptors.hpp"
-#include "vulkan_core/graphic_pipeline.hpp"
 
 #include <memory>
 #include <unordered_map>
 
 namespace my {
+
+class Device;
+class Mytexture;
+class GraphicPipeline;
 
 class SimpleRenderSystem {
   public:

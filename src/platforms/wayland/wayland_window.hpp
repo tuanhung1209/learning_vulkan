@@ -5,7 +5,6 @@
 #include <sys/types.h>
 #include <vector>
 #include <vulkan/vulkan.h>
-#include <vulkan/vulkan_core.h>
 #include <wayland-client-protocol.h>
 #include <wayland-client.h>
 
@@ -16,6 +15,8 @@
 #include <string>
 
 namespace my {
+
+class DisplayProvider;
 
 class WaylandWindow : public DisplayProvider {
   public:
@@ -75,4 +76,5 @@ class WaylandWindow : public DisplayProvider {
     static void onLayerConfigure(void *, zwlr_layer_surface_v1 *, uint32_t, uint32_t, uint32_t);
     static void onLayerClosed(void *, zwlr_layer_surface_v1 *);
 };
+
 } // namespace my

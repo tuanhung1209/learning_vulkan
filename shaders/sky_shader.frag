@@ -28,7 +28,6 @@ layout(set = 0, binding = 0) uniform GlobalUbo{
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
 
 layout(push_constant) uniform Push {
-    vec4 horizonColor;
     vec4 skyColor;
     vec4 skyTextureColor;
 } push;
@@ -67,7 +66,7 @@ void main(){
     float horizonHandle = horizonCurve(texY, 0.005, 0.57);
 
     // sky gradient
-    vec3 skyColor = mix(push.horizonColor.rgb, push.skyColor.rgb, horizonHandle);
+    vec3 skyColor = mix(ubo.fogColor.rgb, push.skyColor.rgb, horizonHandle);
 
     // sun
     vec3 sunDir = normalize(ubo.sunDirection.xyz);

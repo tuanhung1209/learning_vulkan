@@ -1,18 +1,15 @@
 #include "render_systems/ocean_render_system.hpp"
-#include "render_core/my_frame_info.hpp"
-#include "vulkan_core/my_descriptors.hpp"
+
+#include "vulkan_core/device.hpp"
+#include "vulkan_core/my_buffer.hpp"
+#include "render_core/my_model.hpp"
+#include "render_core/my_texture.hpp"
+#include "vulkan_core/graphic_pipeline.hpp"
+
 #include "vulkan_core/swap_chain.hpp"
+#include "render_core/my_imgui.hpp"
 
-#include <array>
-#include <imgui.h>
-#include <memory>
 #include <stdexcept>
-#include <vulkan/vulkan_core.h>
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
 
 namespace my {
 

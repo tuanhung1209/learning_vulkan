@@ -1,5 +1,8 @@
 #include "my_texture.hpp"
+
+#include "vulkan_core/device.hpp"
 #include "vulkan_core/my_buffer.hpp"
+
 #include <cassert>
 #include <stdexcept>
 #include <string>

@@ -3,7 +3,6 @@
 
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
-#include "render_core/my_renderer.hpp"
 #include "vulkan_core/swap_chain.hpp"
 #include <vulkan/vulkan_core.h>
 

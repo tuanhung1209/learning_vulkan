@@ -1,30 +1,44 @@
 #pragma once
 
-#include "game/my_game_object.hpp"
-#include "render_core/my_camera.hpp"
 #include "render_core/my_frame_info.hpp"
-#include "render_core/my_model.hpp"
-#include "vulkan_core/device.hpp"
-#include "vulkan_core/graphic_pipeline.hpp"
 #include "vulkan_core/my_descriptors.hpp"
-#include "vulkan_core/swap_chain.hpp"
 
-#include <memory>
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/common.hpp>
+#include <glm/glm.hpp>
 
 namespace my {
 
+class Device;
+class MyModel;
+class MyTexture;
+class GraphicPipeline;
+
 class SkyRenderSystem {
   public:
+    struct FogSettings {
+        float near{80.f};
+        float far{600.f};
+        float density{1.f};
+        glm::vec4 fogColor{0.5f, 0.6f, 0.7f, 1.0f};
+    };
+
+    struct SkyPush {
+        glm::vec4 skyColor{1.f, 0.53f, 0.2f, 1.f};
+        glm::vec4 skyTextureColor{0.941f, 0.322f, 0.875f, 1.0f};
+    };
+
     SkyRenderSystem(Device &device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout);
     ~SkyRenderSystem();
 
     SkyRenderSystem(const SkyRenderSystem &) = delete;
     SkyRenderSystem &operator=(const SkyRenderSystem &) = delete;
 
-    void renderSky(FrameInfo &frameInfo);
     SkyPush &getPush() { return push; }
-    const FogSettingsUbo &getFog() const { return fog; }
+    const FogSettings &getFog() const { return fog; }
 
+    void renderSky(FrameInfo &frameInfo);
     void drawGui();
 
   private:
@@ -41,7 +55,7 @@ class SkyRenderSystem {
     VkDescriptorSet skyTextureDescriptorSet;
 
     SkyPush push{};
-    FogSettingsUbo fog{};
+    FogSettings fog{};
     std::shared_ptr<MyModel> skyModel;
     std::unique_ptr<GraphicPipeline> myGraphicPipeline;
     VkPipelineLayout graphicPipelineLayout;

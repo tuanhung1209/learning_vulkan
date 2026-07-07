@@ -1,6 +1,6 @@
 #pragma once
 
-#include "render_core/my_frame_info.hpp"
+#include "game/scene_reference.hpp"
 #include "vulkan_core/device.hpp"
 
 #include <string>

@@ -1,14 +1,13 @@
 #pragma once
 
-#include "game/my_game_object.hpp"
-#include "render_core/my_camera.hpp"
 #include "render_core/my_frame_info.hpp"
-#include "vulkan_core/device.hpp"
-#include "vulkan_core/graphic_pipeline.hpp"
 
 #include <memory>
 
 namespace my {
+
+class Device;
+class GraphicPipeline;
 
 class PointLightSystem {
   public:
