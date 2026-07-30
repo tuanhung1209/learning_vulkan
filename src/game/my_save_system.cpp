@@ -1,6 +1,8 @@
 #include "my_save_system.hpp"
 
 #include "game/my_game_object.hpp"
+#include "render_core/my_model.hpp"
+#include "render_core/my_texture.hpp"
 #include "lib/json.hpp"
 
 #include <fstream>

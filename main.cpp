@@ -2,13 +2,22 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <stdexcept>
+#include <string>
+
+namespace my {
+void runEcsTest();
+} // namespace my
 
 int main(int argc, char *argv[]) {
     Mode mode = Mode::Wallpaper;
 
     for (int i = 0; i < argc; i++) {
-        if (std::string(argv[i]) == "--edit") { mode = Mode::Edit; }
+        const std::string arg = argv[i];
+        if (arg == "--edit") { mode = Mode::Edit; }
+        if (arg == "--test-ecs") {
+            my::runEcsTest();
+            return EXIT_SUCCESS;
+        }
     }
 
     my::FirstApp app{mode};
