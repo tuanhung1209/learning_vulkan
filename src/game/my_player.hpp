@@ -1,29 +1,31 @@
 #pragma once
 
+#include "game_components/bullet_handler.hpp"
+#include "ecs/ecs_manager.hpp"
 #include "game/keyboard_movement_controller.hpp"
-#include "game/my_abundance_object_handler.hpp"
-#include "game/my_game_object.hpp"
 #include "render_core/my_camera.hpp"
 
 namespace my {
 
 class MyPlayer {
   public:
-    MyPlayer(MyCamera &camera, MyGameObject::id_t playerId, InputState &input);
+    MyPlayer(MyCamera &camera, EcsManager &ecsManager, InputState &input, Entity playerEntity);
     ~MyPlayer();
 
-    void shoot(BulletHandler &bulletHandler, MyGameObject::Map &gameObjects);
+    void shoot(BulletHandler &bulletHandler);
 
-    void update(InputState &input, float dt, MyGameObject::Map &gameObjects, BulletHandler &bulletHandler);
+    void update(InputState &input, float dt, BulletHandler &bulletHandler);
 
-    MyGameObject::id_t getPlayerId() const { return playerId; }
-    void setPlayerId(MyGameObject::id_t id) { playerId = id; }
+    uint32_t getPlayerId() const { return playerEntity_.id; }
+
+    void setPlayerEntity(Entity playerEntity) { playerEntity_ = playerEntity; }
 
   private:
-    MyCamera &camera;
-    MyGameObject::id_t playerId;
+    Entity playerEntity_;
+    MyCamera &camera_;
+    InputState &input_;
+    EcsManager &ecsManager_;
     KeyboardMovementController playerController{};
-    InputState &input;
 
     float fireCooldown = 0.f;
 };

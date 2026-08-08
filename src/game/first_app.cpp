@@ -1,7 +1,13 @@
 #include "game/first_app.hpp"
 
+// properly need a file to include all component
+#include "ecs/components/transform_component.hpp"
+#include "ecs/components/model_component.hpp"
+#include "ecs/components/texture_component.hpp"
+
+#include "game_components/bullet_handler.hpp"
+
 #include "game/my_player.hpp"
-#include "game/terrain_generation.hpp"
 #include "game/scene_file_panel.hpp"
 #include "game/scene_reference.hpp"
 #include "game/sun_panel.hpp"
@@ -10,8 +16,10 @@
 #include "vulkan_core/my_buffer.hpp"
 #include "input/glfw_input_bridge.hpp"
 
-#include "render_core/my_model.hpp"
+#include "render_core/asset_cache.hpp"
 #include "render_core/my_imgui.hpp"
+
+// properly need a file to include all render system
 #include "render_systems/grass_render_system.hpp"
 #include "render_systems/ocean_render_system.hpp"
 #include "render_systems/sky_render_system.hpp"
@@ -79,7 +87,12 @@ void FirstApp::run() {
             .build(globalDescriptorSet[i]);
     }
 
-    SimpleRenderSystem simpleRenderSystem{*device, myRenderer->getSceneRenderPass(),
+    EcsManager ecsManager{};
+    AssetCache assetCache(*device);
+    loadGameObjects(ecsManager);
+
+    // render system is for gpu side
+    SimpleRenderSystem simpleRenderSystem{*device, assetCache, myRenderer->getSceneRenderPass(),
                                           globalSetLayout->getDescriptorSetLayout()};
     PointLightSystem PointLightSystem{*device, myRenderer->getSceneRenderPass(),
                                       globalSetLayout->getDescriptorSetLayout()};
@@ -89,7 +102,10 @@ void FirstApp::run() {
                                         globalSetLayout->getDescriptorSetLayout()};
     OceanRenderSystem oceanRenderSystem{*device, myRenderer->getSceneRenderPass(),
                                         globalSetLayout->getDescriptorSetLayout()};
-    TerrainGenerator terrainGen{*device};
+
+    // handler is for cpu side
+    BulletHandler bulletHandler{ecsManager};
+    TerrainHandler terrainHanlder{*device, ecsManager, assetCache};
 
     std::unique_ptr<ImGuiWrapper> guiRenderSystem;
     if (mode_ == Mode::Edit) {
@@ -103,9 +119,6 @@ void FirstApp::run() {
     GuiManager guiManager{};
     guiManager.registerGuiPanel(std::make_unique<SunPanel>());
 
-    std::shared_ptr<MyModel> bulletModel = MyModel::createModelFromFile(*device, "assets/models/cube.obj");
-    BulletHandler bulletHandler{bulletModel};
-
     InputState inputState{};
     std::unique_ptr<GlfwInput> glfwInput{};
     if (mode_ == Mode::Edit) { glfwInput = std::make_unique<GlfwInput>(*glfwWindow, inputState); }
@@ -113,21 +126,21 @@ void FirstApp::run() {
     MyCamera camera{};
     camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
 
-    auto playerObject = MyGameObject::createGameObject();
-    auto playerId = playerObject.getId();
-    gameObjects.emplace(playerId, std::move(playerObject));
-    MyPlayer mainPlayer{camera, playerId, inputState};
+    // should i change the player entity for hanler also so it match
+    Entity playerEntity = ecsManager.createEntity();
+    ecsManager.add<TransformComponent>(playerEntity, TransformComponent{});
+    MyPlayer mainPlayer{camera, ecsManager, inputState, playerEntity};
 
-    SceneEntityRef sceneRef{gameObjects,
-                            playerId,
-                            terrainGen.config,
+    SceneEntityRef sceneRef{ecsManager,
+                            playerEntity,
+                            terrainHanlder.getConfig(),
                             skyRenderSystem.getPush(),
                             grassRenderSystem.getPush(),
                             oceanRenderSystem.getOceanUbo()};
-
     saveSystem.loadScene("assets/scenes/default.json", sceneRef);
-    terrainGen.createTerrain(gameObjects);
-    grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(), terrainGen.config.heightScale);
+
+    terrainHanlder.createTerrain();
+    grassRenderSystem.updateHeightMap(terrainHanlder.getHeightMap(), terrainHanlder.getConfig().heightScale);
 
     auto currentTime = std::chrono::high_resolution_clock::now();
     float totalTime = 0.f;
@@ -147,7 +160,8 @@ void FirstApp::run() {
         currentTime = newTime;
         totalTime += frameTime;
 
-        mainPlayer.update(inputState, frameTime, gameObjects, bulletHandler);
+        // line below to update cpu logic
+        mainPlayer.update(inputState, frameTime, bulletHandler);
         bulletHandler.update(frameTime);
 
         float aspect = myRenderer->getAspectRatio();
@@ -155,8 +169,8 @@ void FirstApp::run() {
 
         if (auto commandBuffer = myRenderer->beginFrame()) {
             int frameIndex = myRenderer->getFrameIndex();
-            FrameInfo frameInfo{frameIndex, frameTime, commandBuffer, camera, globalDescriptorSet[frameIndex],
-                                gameObjects};
+            FrameInfo frameInfo{frameIndex, frameTime, commandBuffer, globalDescriptorSet[frameIndex],
+                                camera,     ecsManager};
 
             guiManager.updatePanels(sceneRef);
 
@@ -169,27 +183,29 @@ void FirstApp::run() {
                 if (event.savePath) { saveSystem.saveScene(*event.savePath, sceneRef); }
                 if (event.loadPath) {
                     vkDeviceWaitIdle(device->device());
-                    gameObjects.clear();
+                    ecsManager.clearEcs();
 
-                    auto newPlayer = MyGameObject::createGameObject();
-                    sceneRef.playerId = newPlayer.getId();
-                    gameObjects.emplace(sceneRef.playerId, std::move(newPlayer));
-                    mainPlayer.setPlayerId(sceneRef.playerId);
+                    bulletHandler.resetPool();
+
+                    Entity newPlayer = ecsManager.createEntity();
+                    ecsManager.add<TransformComponent>(newPlayer, TransformComponent{});
+                    mainPlayer.setPlayerEntity(newPlayer);
+                    sceneRef.playerEntity = newPlayer;
 
                     saveSystem.loadScene(*event.loadPath, sceneRef);
-                    terrainGen.createTerrain(gameObjects);
-                    grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(),
-                                                      terrainGen.config.heightScale);
+                    terrainHanlder.createTerrain();
+                    grassRenderSystem.updateHeightMap(terrainHanlder.getHeightMap(),
+                                                      terrainHanlder.getConfig().heightScale);
                 }
 
-                if (terrainGen.drawGui()) {
+                if (terrainHanlder.drawGui()) {
                     vkDeviceWaitIdle(device->device());
-                    terrainGen.regenerate(gameObjects);
-                    grassRenderSystem.updateHeightMap(terrainGen.getHeightMap(),
-                                                      terrainGen.config.heightScale);
+                    terrainHanlder.regenerateTerrain();
+                    grassRenderSystem.updateHeightMap(terrainHanlder.getHeightMap(),
+                                                      terrainHanlder.getConfig().heightScale);
                 }
 
-                grassRenderSystem.drawGui(terrainGen.config.heightScale);
+                grassRenderSystem.drawGui(terrainHanlder.getConfig().heightScale);
                 skyRenderSystem.drawGui();
                 oceanRenderSystem.drawGui();
 
@@ -225,10 +241,9 @@ void FirstApp::run() {
 
             skyRenderSystem.renderSky(frameInfo);
             oceanRenderSystem.renderOcean(frameInfo);
-            simpleRenderSystem.renderGameObjects(frameInfo);
-            bulletHandler.renderBullet(commandBuffer, simpleRenderSystem.getGraphicPipelineLayout());
             grassRenderSystem.renderGrass(frameInfo);
             PointLightSystem.renderLight(frameInfo);
+            simpleRenderSystem.renderGameObjects(frameInfo);
 
             if (guiRenderSystem) { guiRenderSystem->renderGui(frameInfo); }
 
@@ -240,6 +255,15 @@ void FirstApp::run() {
     vkDeviceWaitIdle(device->device());
 }
 
-void FirstApp::loadGameObjects() {}
+void FirstApp::loadGameObjects(EcsManager &ecsManager) {
+    // start load game here
+    Entity box1 = ecsManager.createEntity();
+
+    // TODO:  the save sill be a problem so fix that later
+    ecsManager.add<TransformComponent>(
+        box1, TransformComponent{.translation = {1.0f, 2.0f, 3.0f}, .rotation = {2.0f, 3.0f, 4.0f}});
+    ecsManager.add<ModelComponent>(box1, ModelComponent{"assets/models/cube.obj"});
+    ecsManager.add<TextureComponent>(box1, TextureComponent{"assets/textures/white.png"});
+}
 
 } // namespace my

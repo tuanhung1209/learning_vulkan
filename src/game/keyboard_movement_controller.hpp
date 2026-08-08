@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/my_game_object.hpp"
+#include "ecs/components/transform_component.hpp"
 
 namespace my {
 
@@ -8,7 +8,7 @@ class InputState;
 
 class KeyboardMovementController {
   public:
-    void moveInPlaneXZ(const InputState &input, float dt, MyGameObject &gameObject);
+    void moveInPlaneXZ(const InputState &input, float dt, TransformComponent &transformComponent);
 
     float movementSpeed{30.0f};
     float rotationSpeed{1.5f};

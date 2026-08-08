@@ -18,6 +18,11 @@ class EcsManager {
     EcsManager() = default;
     ~EcsManager() = default;
 
+    EcsManager(const EcsManager &) = delete;
+    EcsManager &operator=(const EcsManager &) = delete;
+    EcsManager(EcsManager &&) = default;
+    EcsManager &operator=(EcsManager &&) = default;
+
     Entity createEntity() {
         uint32_t id;
         uint32_t generation;

@@ -1,40 +1,52 @@
-#include "game/terrain_generation.hpp"
+#include "terrain_handler.hpp"
+
+#include "ecs/components/model_component.hpp"
+#include "ecs/components/texture_component.hpp"
+#include "ecs/components/transform_component.hpp"
+#include "ecs/entity.hpp"
 
 #include "vulkan_core/device.hpp"
 #include "render_core/my_model.hpp"
 #include "math/perlin_noise.hpp"
 
-#include <glm/glm.hpp>
 #include <imgui.h>
 #include <iostream>
+#include <memory>
 
 namespace my {
 
-TerrainGenerator::TerrainGenerator(Device &device) : myDevice{device} {}
+TerrainHandler::TerrainHandler(Device &device, EcsManager &ecsManager, AssetCache &assetCache)
+    : myDevice_{device}, ecsManager_(ecsManager), assetCache_(assetCache) {
+    terrainEntity_ = {Entity::null};
+}
 
-void TerrainGenerator::createTerrain(MyGameObject::Map &gameObjects) {
+void TerrainHandler::createTerrain() {
+    std::string filepath = createTerrainMesh();
+    ecsManager_.add<ModelComponent>(terrainEntity_, ModelComponent{.modelPath = filepath});
+    ecsManager_.add<TextureComponent>(terrainEntity_, TextureComponent{"assets/textures/white.png"});
+    ecsManager_.add<TransformComponent>(terrainEntity_, TransformComponent{.translation = {0.f, 0.5f, 0.f}});
+}
+
+void TerrainHandler::regenerateTerrain() {
+    std::string filepath = createTerrainMesh();
+    ecsManager_.add<ModelComponent>(terrainEntity_, ModelComponent{.modelPath = filepath});
+}
+
+std::string TerrainHandler::createTerrainMesh() {
+    if (!ecsManager_.isEntityAlive(terrainEntity_)) { terrainEntity_ = ecsManager_.createEntity(); }
     int res = config.resolution;
     std::vector<uint8_t> noisePixels(res * res * 4);
     heightMap.resize(res * res);
     generateHeightMap(heightMap, noisePixels);
 
-    auto terrain = MyGameObject::createGameObject();
-    terrain.model = generateMesh(heightMap, res, 1, config.heightScale);
-    terrain.transform.translation = {0.f, 0.5f, 0.f};
-    terrainId = terrain.getId();
-    gameObjects.emplace(terrain.getId(), std::move(terrain));
+    std::shared_ptr<MyModel> terrainModel = generateMesh(heightMap, res, 1, config.heightScale);
+    std::string filepath = "assets/terrainModel";
+    assetCache_.insertModel(filepath, terrainModel);
+
+    return filepath;
 }
 
-void TerrainGenerator::regenerate(MyGameObject::Map &gameObjects) {
-    int res = config.resolution;
-    std::vector<uint8_t> noisePixels(res * res * 4);
-    heightMap.resize(res * res);
-    generateHeightMap(heightMap, noisePixels);
-
-    gameObjects.at(terrainId).model = generateMesh(heightMap, res, 1, config.heightScale);
-}
-
-bool TerrainGenerator::drawGui() {
+bool TerrainHandler::drawGui() {
     bool regenerate = false;
     ImGui::Begin("Terrain");
     ImGui::SliderInt("Seed", &config.seed, 0, 100);
@@ -54,15 +66,16 @@ bool TerrainGenerator::drawGui() {
     return regenerate;
 }
 
-void TerrainGenerator::generateHeightMap(std::vector<float> &heightMap, std::vector<uint8_t> &noisePixels) {
-    int res = config.resolution;
-    PerlinGenerator::populateNoise(config.octaves, config.noiseScale, res, res, config.rotationAngle,
-                                   noisePixels, heightMap, config.seed, config.lacunarity,
-                                   config.persistence);
-    addIslandProperty(heightMap, res);
+void TerrainHandler::generateHeightMap(std::vector<float> &heightMap, std::vector<uint8_t> &noisePixels) {
+    PerlinGenerator::populateNoise(config.octaves, config.noiseScale, config.resolution, config.resolution,
+                                   config.rotationAngle, noisePixels, heightMap, config.seed,
+                                   config.lacunarity, config.persistence);
+
+    addIslandProperty(heightMap, config.resolution);
+    // might add stuff later here for biome percific or something
 }
 
-void TerrainGenerator::addIslandProperty(std::vector<float> &heightMap, int gridSize) {
+void TerrainHandler::addIslandProperty(std::vector<float> &heightMap, int gridSize) {
     float centerX = (gridSize - 1) / 2.0f;
     float centerZ = (gridSize - 1) / 2.0f;
 
@@ -79,8 +92,8 @@ void TerrainGenerator::addIslandProperty(std::vector<float> &heightMap, int grid
     }
 }
 
-std::unique_ptr<MyModel> TerrainGenerator::generateMesh(const std::vector<float> &heightMap, int gridSize,
-                                                        float cellSize, float heightScale) {
+std::unique_ptr<MyModel> TerrainHandler::generateMesh(const std::vector<float> &heightMap, int gridSize,
+                                                      float cellSize, float heightScale) {
     MyModel::Builder builder{};
 
     float offSet = (gridSize - 1) * cellSize * 0.5f;
@@ -173,7 +186,7 @@ std::unique_ptr<MyModel> TerrainGenerator::generateMesh(const std::vector<float>
     }
 
     std::cout << "number of terrain vertex :" << builder.vertices.size() << "\n";
-    return std::make_unique<MyModel>(myDevice, builder);
+    return std::make_unique<MyModel>(myDevice_, builder);
 }
 
 } // namespace my

@@ -2,6 +2,7 @@
 
 #include "render_core/my_frame_info.hpp"
 #include "vulkan_core/my_descriptors.hpp"
+#include "render_core/asset_cache.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -9,12 +10,13 @@
 namespace my {
 
 class Device;
-class Mytexture;
+class MyTexture;
 class GraphicPipeline;
 
 class SimpleRenderSystem {
   public:
-    SimpleRenderSystem(Device &device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout);
+    SimpleRenderSystem(Device &device, AssetCache &assetCache, VkRenderPass renderPass,
+                       VkDescriptorSetLayout globalSetLayout);
     ~SimpleRenderSystem();
 
     SimpleRenderSystem(const SimpleRenderSystem &) = delete;
@@ -30,7 +32,8 @@ class SimpleRenderSystem {
     void createGraphicPipeline(VkRenderPass renderPass);
     VkDescriptorSet getOrCreateTextureDescriptorSet(MyTexture &tex);
 
-    Device &myDevice;
+    Device &myDevice_;
+    AssetCache &assetCache_;
 
     std::shared_ptr<MyTexture> defaultWhiteTexture;
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/my_game_object.hpp"
+#include "ecs/ecs_manager.hpp"
 #include "render_core/my_camera.hpp"
 
 #include <vulkan/vulkan.h>
@@ -41,9 +41,9 @@ struct FrameInfo {
     int frameIndex;
     float frameTime;
     VkCommandBuffer commandBuffer;
-    MyCamera &camera;
     VkDescriptorSet globalDescriptorSet;
-    MyGameObject::Map &gameObjecs;
+    MyCamera &camera;
+    EcsManager &ecsManager;
 };
 
 struct SimplePushConstantData {

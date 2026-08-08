@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/scene_reference.hpp"
+
 namespace my {
 
 class GuiPanel {

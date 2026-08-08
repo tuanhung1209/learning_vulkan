@@ -1,6 +1,7 @@
 #pragma once
 
-#include "game/my_game_object.hpp"
+#include "ecs/ecs_manager.hpp"
+#include "render_core/asset_cache.hpp"
 
 #include <glm/glm.hpp>
 #include <memory>
@@ -11,7 +12,7 @@ namespace my {
 class Device;
 class MyModel;
 
-class TerrainGenerator {
+class TerrainHandler {
   public:
     struct TerrainConfig {
         int seed = 2;
@@ -27,28 +28,32 @@ class TerrainGenerator {
         float rockThreshold = 0.25f;
     };
 
-    TerrainGenerator(Device &device);
+    TerrainHandler(Device &device, EcsManager &ecsManager, AssetCache &assetCache);
 
-    void createTerrain(MyGameObject::Map &gameObjects);
-
-    void regenerate(MyGameObject::Map &gameObjects);
+    void createTerrain();
+    void regenerateTerrain();
 
     bool drawGui();
 
     const std::vector<float> &getHeightMap() const { return heightMap; }
-
-    TerrainConfig config{};
+    const TerrainConfig &getConfig() const { return config; }
+    TerrainConfig &getConfig() { return config; }
 
   private:
+    std::string createTerrainMesh();
     void generateHeightMap(std::vector<float> &heightMap, std::vector<uint8_t> &noisePixels);
     void addIslandProperty(std::vector<float> &heightMap, int gridSize);
+
+    // how to save this mesh if only mo take file path
     std::unique_ptr<MyModel> generateMesh(const std::vector<float> &heightMap, int gridSize, float cellSize,
                                           float heightScale);
-
     std::vector<float> heightMap;
 
-    Device &myDevice;
-    MyGameObject::id_t terrainId{};
+    TerrainConfig config{};
+    Device &myDevice_;
+    EcsManager &ecsManager_;
+    AssetCache &assetCache_;
+    Entity terrainEntity_;
 };
 
 } // namespace my

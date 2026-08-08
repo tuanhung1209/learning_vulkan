@@ -1,20 +1,22 @@
 #pragma once
 
-#include "game/my_game_object.hpp"
-#include "game/terrain_generation.hpp"
+#include "ecs/ecs_manager.hpp"
+#include "ecs/entity.hpp"
+
 #include "render_systems/sky_render_system.hpp"
 #include "render_systems/grass_render_system.hpp"
 #include "render_systems/ocean_render_system.hpp"
 
+#include "game/game_components/terrain_handler.hpp"
+
 #include <glm/glm.hpp>
 
-// might change this later
 namespace my {
 
 struct SceneEntityRef {
-    MyGameObject::Map &gameObjects;
-    MyGameObject::id_t playerId;
-    TerrainGenerator::TerrainConfig &terrainConfig;
+    EcsManager &ecsManager;
+    Entity playerEntity;
+    TerrainHandler::TerrainConfig &terrainConfig;
     SkyRenderSystem::SkyPush &skyConfig;
     GrassRenderSystem::GrassComputePush &grassConfig;
     OceanRenderSystem::OceanUbo &oceanConfig;

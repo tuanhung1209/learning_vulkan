@@ -1,6 +1,6 @@
 #pragma once
 
-#include "my_game_object.hpp"
+#include "ecs/ecs_manager.hpp"
 #include "platforms/glfw_window.hpp"
 #include "platforms/wayland/wayland_window.hpp"
 #include "render_core/my_renderer.hpp"
@@ -28,7 +28,7 @@ class FirstApp {
     void run();
 
   private:
-    void loadGameObjects();
+    void loadGameObjects(EcsManager &ecsManager);
     Mode mode_;
 
     std::unique_ptr<WaylandWindow> waylandWindow;
@@ -38,7 +38,6 @@ class FirstApp {
     std::unique_ptr<MyRenderer> myRenderer{};
 
     std::unique_ptr<MyDescriptorPool> globalPool;
-    MyGameObject::Map gameObjects;
 };
 
 } // namespace my

@@ -1,8 +1,11 @@
 #include "my_save_system.hpp"
 
-#include "game/my_game_object.hpp"
-#include "render_core/my_model.hpp"
-#include "render_core/my_texture.hpp"
+#include "ecs/components/transform_component.hpp"
+#include "ecs/components/model_component.hpp"
+#include "ecs/components/texture_component.hpp"
+#include "ecs/components/point_light_component.hpp"
+#include "game_components/bullet_component.hpp"
+
 #include "lib/json.hpp"
 
 #include <fstream>
@@ -18,34 +21,40 @@ void SaveSystem::saveScene(const std::string &saveFilePath, SceneEntityRef scene
     json sceneJson;
 
     // Player
-    if (scene.gameObjects.count(scene.playerId)) {
-        auto &p = scene.gameObjects.at(scene.playerId);
-        json playerJson;
-        playerJson["translation"] = {p.transform.translation.x, p.transform.translation.y,
-                                     p.transform.translation.z};
-        playerJson["rotation"] = {p.transform.rotation.x, p.transform.rotation.y, p.transform.rotation.z};
-        sceneJson["player"] = playerJson;
+    if (scene.ecsManager.isEntityAlive(scene.playerEntity)) {
+        auto *t = scene.ecsManager.get<TransformComponent>(scene.playerEntity);
+        if (t) {
+            json playerJson;
+            playerJson["translation"] = {t->translation.x, t->translation.y, t->translation.z};
+            playerJson["rotation"] = {t->rotation.x, t->rotation.y, t->rotation.z};
+            sceneJson["player"] = playerJson;
+        }
     }
 
-    // GameObjects
+    // Drawable entities (have Transform + Model + Texture).
+    // Bullets are transient — skip them. The player is saved separately above.
     json jsonGameObjectArray = json::array();
-    for (auto &kv : scene.gameObjects) {
-        if (kv.first == scene.playerId) continue;
-        auto &obj = kv.second;
+    for (auto [e, t, m, tex] :
+         scene.ecsManager.query<TransformComponent, ModelComponent, TextureComponent>()) {
+
+        if (e == scene.playerEntity) continue;
+        if (scene.ecsManager.has<BulletComponent>(e)) continue;
 
         json jsonObj;
-        jsonObj["id"] = kv.first;
-        jsonObj["textureFilePath"] = obj.textureFilePath;
-        jsonObj["modelFilePath"] = obj.modelFilePath;
-        jsonObj["transform"]["translation"] = {obj.transform.translation.x, obj.transform.translation.y,
-                                               obj.transform.translation.z};
-        jsonObj["transform"]["rotation"] = {obj.transform.rotation.x, obj.transform.rotation.y,
-                                            obj.transform.rotation.z};
-        jsonObj["transform"]["scale"] = {obj.transform.scale.x, obj.transform.scale.y, obj.transform.scale.z};
+        jsonObj["id"] = e.id; // hint only — loader creates fresh entities
+        jsonObj["modelFilePath"] = m.modelPath;
+        jsonObj["textureFilePath"] = tex.texturePath;
+        jsonObj["transform"]["translation"] = {t.translation.x, t.translation.y, t.translation.z};
+        jsonObj["transform"]["rotation"] = {t.rotation.x, t.rotation.y, t.rotation.z};
+        jsonObj["transform"]["scale"] = {t.scale.x, t.scale.y, t.scale.z};
 
-        if (obj.pointLight) {
-            jsonObj["pointLight"]["lightIntensity"] = obj.pointLight->lightIntensity;
-            jsonObj["pointLight"]["color"] = {obj.color.x, obj.color.y, obj.color.z};
+        if (scene.ecsManager.has<PointLightComponent>(e)) {
+            auto *pl = scene.ecsManager.get<PointLightComponent>(e);
+            auto *c = scene.ecsManager.get<ColorComponent>(e);
+            if (pl) {
+                jsonObj["pointLight"]["lightIntensity"] = pl->lightIntensity;
+                if (c) jsonObj["pointLight"]["color"] = {c->rgb.x, c->rgb.y, c->rgb.z};
+            }
         }
 
         jsonGameObjectArray.push_back(jsonObj);
@@ -128,45 +137,46 @@ void SaveSystem::loadScene(const std::string &loadFilePath, SceneEntityRef scene
     std::ifstream loadFile(loadFilePath);
     json jsonScene = json::parse(loadFile);
 
-    // Player
+    // Player — assumed already created by caller (first_app does createEntity()
+    // before loadScene). We just write the saved transform into it.
     if (jsonScene.contains("player")) {
         auto &p = jsonScene["player"];
-        auto &playerTransform = scene.gameObjects.at(scene.playerId).transform;
-        playerTransform.translation = {p["translation"][0], p["translation"][1], p["translation"][2]};
-        playerTransform.rotation = {p["rotation"][0], p["rotation"][1], p["rotation"][2]};
+        auto *t = scene.ecsManager.get<TransformComponent>(scene.playerEntity);
+        if (t) {
+            t->translation = {p["translation"][0], p["translation"][1], p["translation"][2]};
+            t->rotation = {p["rotation"][0], p["rotation"][1], p["rotation"][2]};
+        }
     }
 
-    // GameObjects
+    // Drawable entities. Each loaded entry becomes a fresh entity in the registry.
+    // The saved "id" is a hint only — generations are runtime state and don't
+    // persist across runs, so we never trust an old (id, gen) pair.
     for (auto &oldObj : jsonScene["gameObjects"]) {
-        auto obj = MyGameObject::createGameObjectWithId(oldObj["id"]);
+        Entity obj = scene.ecsManager.createEntity();
 
-        obj.modelFilePath = oldObj["modelFilePath"];
-        obj.textureFilePath = oldObj["textureFilePath"];
+        TransformComponent t;
+        t.translation = {oldObj["transform"]["translation"][0], oldObj["transform"]["translation"][1],
+                         oldObj["transform"]["translation"][2]};
+        t.rotation = {oldObj["transform"]["rotation"][0], oldObj["transform"]["rotation"][1],
+                       oldObj["transform"]["rotation"][2]};
+        t.scale = {oldObj["transform"]["scale"][0], oldObj["transform"]["scale"][1],
+                    oldObj["transform"]["scale"][2]};
+        scene.ecsManager.add<TransformComponent>(obj, t);
 
-        if (!obj.modelFilePath.empty()) {
-            obj.model = MyModel::createModelFromFile(myDevice, obj.modelFilePath);
-        }
-
-        if (!obj.textureFilePath.empty()) {
-            obj.texture = std::make_shared<MyTexture>(myDevice, obj.textureFilePath);
-        }
-
-        obj.transform.translation = {oldObj["transform"]["translation"][0],
-                                     oldObj["transform"]["translation"][1],
-                                     oldObj["transform"]["translation"][2]};
-        obj.transform.rotation = {oldObj["transform"]["rotation"][0], oldObj["transform"]["rotation"][1],
-                                  oldObj["transform"]["rotation"][2]};
-        obj.transform.scale = {oldObj["transform"]["scale"][0], oldObj["transform"]["scale"][1],
-                               oldObj["transform"]["scale"][2]};
+        std::string modelPath = oldObj["modelFilePath"];
+        std::string texPath = oldObj["textureFilePath"];
+        if (!modelPath.empty()) scene.ecsManager.add<ModelComponent>(obj, ModelComponent{modelPath});
+        if (!texPath.empty()) scene.ecsManager.add<TextureComponent>(obj, TextureComponent{texPath});
 
         if (oldObj.contains("pointLight")) {
-            obj.pointLight = std::make_unique<PointLightComponent>();
-            obj.pointLight->lightIntensity = oldObj["pointLight"]["lightIntensity"];
-            obj.color = {oldObj["pointLight"]["color"][0], oldObj["pointLight"]["color"][1],
-                         oldObj["pointLight"]["color"][2]};
+            scene.ecsManager.add<PointLightComponent>(
+                obj, PointLightComponent{oldObj["pointLight"]["lightIntensity"].get<float>()});
+            if (oldObj["pointLight"].contains("color")) {
+                scene.ecsManager.add<ColorComponent>(
+                    obj, ColorComponent{{oldObj["pointLight"]["color"][0], oldObj["pointLight"]["color"][1],
+                                          oldObj["pointLight"]["color"][2]}});
+            }
         }
-
-        scene.gameObjects.emplace(obj.getId(), std::move(obj));
     }
 
     // Terrain
@@ -188,7 +198,7 @@ void SaveSystem::loadScene(const std::string &loadFilePath, SceneEntityRef scene
     auto &skyData = jsonScene["sky"];
     auto &skyPush = scene.skyConfig;
     skyPush.skyColor = {skyData["skyColor"][0], skyData["skyColor"][1], skyData["skyColor"][2],
-                        skyData["skyColor"][3]};
+                       skyData["skyColor"][3]};
     skyPush.skyTextureColor = {skyData["skyTextureColor"][0], skyData["skyTextureColor"][1],
                                skyData["skyTextureColor"][2], skyData["skyTextureColor"][3]};
 
@@ -236,4 +246,4 @@ void SaveSystem::loadScene(const std::string &loadFilePath, SceneEntityRef scene
     }
 }
 
-}; // namespace my
+} // namespace my

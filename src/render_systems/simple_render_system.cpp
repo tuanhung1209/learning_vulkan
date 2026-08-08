@@ -5,34 +5,38 @@
 #include "render_core/my_model.hpp" // IWYU pragma: keep
 #include "vulkan_core/graphic_pipeline.hpp"
 
+#include "ecs/components/transform_component.hpp"
+#include "ecs/components/model_component.hpp"
+#include "ecs/components/texture_component.hpp"
+
 #include <stdexcept>
 
 namespace my {
 
-SimpleRenderSystem::SimpleRenderSystem(Device &device, VkRenderPass renderPass,
+SimpleRenderSystem::SimpleRenderSystem(Device &device, AssetCache &assetCache, VkRenderPass renderPass,
                                        VkDescriptorSetLayout globalSetLayout)
-    : myDevice{device} {
+    : myDevice_{device}, assetCache_(assetCache) {
     createTexturePoolAndSetLayout();
     createGraphicPipelineLayout(globalSetLayout);
     createGraphicPipeline(renderPass);
 }
 
 SimpleRenderSystem::~SimpleRenderSystem() {
-    vkDestroyPipelineLayout(myDevice.device(), graphicPipelineLayout, nullptr);
+    vkDestroyPipelineLayout(myDevice_.device(), graphicPipelineLayout, nullptr);
 }
 
 void SimpleRenderSystem::createTexturePoolAndSetLayout() {
-    texturePool = MyDescriptorPool::Builder(myDevice)
+    texturePool = MyDescriptorPool::Builder(myDevice_)
                       .setMaxSets(100)
                       .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100)
                       .build();
 
     textureSetLayout =
-        MyDescriptorSetLayout::Builder(myDevice)
+        MyDescriptorSetLayout::Builder(myDevice_)
             .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .build();
 
-    defaultWhiteTexture = std::make_shared<MyTexture>(myDevice, "assets/textures/white.png");
+    defaultWhiteTexture = std::make_shared<MyTexture>(myDevice_, "assets/textures/white.png");
 }
 
 void SimpleRenderSystem::createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
@@ -51,7 +55,7 @@ void SimpleRenderSystem::createGraphicPipelineLayout(VkDescriptorSetLayout globa
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-    if (vkCreatePipelineLayout(myDevice.device(), &pipelineLayoutInfo, nullptr, &graphicPipelineLayout) !=
+    if (vkCreatePipelineLayout(myDevice_.device(), &pipelineLayoutInfo, nullptr, &graphicPipelineLayout) !=
         VK_SUCCESS) {
         throw std::runtime_error("can not create pipelinelayout");
     }
@@ -64,7 +68,7 @@ void SimpleRenderSystem::createGraphicPipeline(VkRenderPass renderPass) {
     GraphicPipeline::defaultPipelineConfigInfo(pipelineConfig);
     pipelineConfig.renderPass = renderPass;
     pipelineConfig.pipelineLayout = graphicPipelineLayout;
-    myGraphicPipeline = std::make_unique<GraphicPipeline>(myDevice, "shaders/simple_shader.vert.spv",
+    myGraphicPipeline = std::make_unique<GraphicPipeline>(myDevice_, "shaders/simple_shader.vert.spv",
                                                           "shaders/simple_shader.frag.spv", pipelineConfig);
 }
 
@@ -91,27 +95,27 @@ void SimpleRenderSystem::renderGameObjects(FrameInfo &frameInfo) {
     vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicPipelineLayout,
                             0, 1, &frameInfo.globalDescriptorSet, 0, nullptr);
 
-    // can split into multiple vector to have object with different component/attribute
-    for (auto &kv : frameInfo.gameObjecs) {
-        auto &obj = kv.second;
+    for (auto [e, trans, mo, te] :
+         frameInfo.ecsManager.query<TransformComponent, ModelComponent, TextureComponent>()) {
+        if (mo.modelPath.empty()) continue;
 
-        if (obj.model == nullptr) continue;
-
-        MyTexture &tex = obj.texture ? *obj.texture : *defaultWhiteTexture;
+        MyTexture &tex =
+            !te.texturePath.empty() ? *assetCache_.getTexture(te.texturePath) : *defaultWhiteTexture;
         VkDescriptorSet texDescriptorSet = getOrCreateTextureDescriptorSet(tex);
         vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 graphicPipelineLayout, 1, 1, &texDescriptorSet, 0, nullptr);
 
         SimplePushConstantData push{};
-        push.modelMatrix = obj.transform.mat4();
-        push.normalMatrix = obj.transform.normalMatrix();
+        push.modelMatrix = trans.mat4();
+        push.normalMatrix = trans.normalMatrix();
 
         vkCmdPushConstants(frameInfo.commandBuffer, graphicPipelineLayout,
                            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
                            sizeof(SimplePushConstantData), &push);
 
-        obj.model->bind(frameInfo.commandBuffer);
-        obj.model->draw(frameInfo.commandBuffer);
+        auto model = assetCache_.getModel(mo.modelPath);
+        model->bind(frameInfo.commandBuffer);
+        model->draw(frameInfo.commandBuffer);
     }
 }
 

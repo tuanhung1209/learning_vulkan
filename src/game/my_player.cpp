@@ -1,37 +1,42 @@
 #include "game/my_player.hpp"
 
 #include "input/input_state.hpp"
+#include "ecs/components/transform_component.hpp"
 
 namespace my {
 
-MyPlayer::MyPlayer(MyCamera &camera, MyGameObject::id_t playerId, InputState &input)
-    : playerId{playerId}, camera{camera}, input{input} {}
+MyPlayer::MyPlayer(MyCamera &camera, EcsManager &ecsManager, InputState &input, Entity playerEntity)
+    : camera_{camera}, playerEntity_(playerEntity), ecsManager_(ecsManager), input_{input} {}
 
 MyPlayer::~MyPlayer() {}
 
-void MyPlayer::update(InputState &input, float dt, MyGameObject::Map &gameObjects,
-                      BulletHandler &bulletHandler) {
-    auto &body = gameObjects.at(playerId);
-    playerController.moveInPlaneXZ(input, dt, body);
-    camera.setViewYXZ(body.transform.translation, body.transform.rotation);
+void MyPlayer::update(InputState &input, float dt, BulletHandler &bulletHandler) {
+
+    TransformComponent *player_trans = ecsManager_.get<TransformComponent>(playerEntity_);
+    if (!player_trans) return;
+
+    playerController.moveInPlaneXZ(input, dt, *player_trans);
+
+    camera_.setViewYXZ(player_trans->translation, player_trans->rotation);
 
     if (fireCooldown > 0) fireCooldown -= dt;
 
     if (input.isDown(InputState::Key::SPACE) && fireCooldown <= 0) {
-        shoot(bulletHandler, gameObjects);
+        shoot(bulletHandler);
         fireCooldown = 0.2f;
     }
 }
 
-void MyPlayer::shoot(BulletHandler &bulletHandler, MyGameObject::Map &gameObjects) {
-    auto &playerTransform = gameObjects.at(playerId).transform;
+void MyPlayer::shoot(BulletHandler &bulletHandler) {
+    TransformComponent *player_trans = ecsManager_.get<TransformComponent>(playerEntity_);
+    if (!player_trans) return;
 
-    float yaw = playerTransform.rotation.y;
-    float pitch = playerTransform.rotation.x;
+    float yaw = player_trans->rotation.y;
+    float pitch = player_trans->rotation.x;
     glm::vec3 forwardDir{sin(yaw) * cos(pitch), -sin(pitch), cos(yaw) * cos(pitch)};
 
-    glm::vec3 spawnPos = playerTransform.translation + forwardDir * 1.1f;
-    bulletHandler.spawnBullet(spawnPos, forwardDir, playerTransform.rotation);
+    glm::vec3 spawnPos = player_trans->translation + forwardDir * 1.1f;
+    bulletHandler.spawnBullet(spawnPos, forwardDir, player_trans->rotation);
 }
 
 } // namespace my
